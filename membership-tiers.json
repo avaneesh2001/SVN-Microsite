@@ -1,0 +1,45 @@
+{
+  "tiers": [
+    {
+      "code": "MEMBER_10000",
+      "name": "Golden Circle Member",
+      "amount": 10000,
+      "cta": "Join the Golden Circle",
+      "benefits": { "anandUtsavTickets": 1, "danceCompanyTickets": 0, "workshopAccess": "none", "workshopPasses": 0, "privateBaithak": false },
+      "benefitLabels": ["1 complimentary ticket to Anand Utsav, SVN's flagship annual festival"]
+    },
+    {
+      "code": "PATRON_25000",
+      "name": "Golden Circle Patron",
+      "amount": 25000,
+      "cta": "Become a Patron",
+      "benefits": { "anandUtsavTickets": 2, "danceCompanyTickets": 0, "workshopAccess": "all", "workshopPasses": 1, "privateBaithak": false },
+      "benefitLabels": ["2 complimentary tickets to Anand Utsav", "1 complimentary participant pass providing access to all SVN in-house workshops during the membership period"]
+    },
+    {
+      "code": "BENEFACTOR_50000",
+      "name": "Golden Circle Benefactor",
+      "amount": 50000,
+      "cta": "Become a Benefactor",
+      "benefits": { "anandUtsavTickets": 2, "danceCompanyTickets": 2, "workshopAccess": "two", "workshopPasses": 0, "privateBaithak": false },
+      "benefitLabels": ["2 complimentary tickets to Anand Utsav", "2 complimentary tickets to Madhur Gupta Dance Company productions", "Access to 2 SVN in-house workshops"]
+    },
+    {
+      "code": "FELLOW_100000",
+      "name": "Golden Circle Fellow",
+      "amount": 100000,
+      "cta": "Become a Fellow",
+      "benefits": { "anandUtsavTickets": 2, "danceCompanyTickets": 2, "workshopAccess": "all", "workshopPasses": 0, "privateBaithak": false },
+      "benefitLabels": ["2 complimentary tickets to Anand Utsav", "2 complimentary tickets to Madhur Gupta Dance Company productions", "Access to all SVN in-house workshops during the membership period"]
+    },
+    {
+      "code": "LEGACY_500000",
+      "name": "Legacy Patron",
+      "amount": 500000,
+      "cta": "Become a Legacy Patron",
+      "badge": "Private Baithak",
+      "benefits": { "anandUtsavTickets": 2, "danceCompanyTickets": 2, "workshopAccess": "included", "workshopPasses": 0, "privateBaithak": true },
+      "benefitLabels": ["2 complimentary tickets to Anand Utsav", "2 complimentary tickets to Madhur Gupta Dance Company productions", "Access to SVN in-house workshops", "One exclusive private baithak created especially for the patron and their invited friends and family", "The baithak may commemorate a significant personal milestone such as a 50th or 55th wedding anniversary, birthday or other important occasion", "The private presentation will feature selected young artists of Sangeet Vidya Niketan together with Madhur Gupta", "The experience should feel intimate, personal and celebratory rather than like a conventional public performance"]
+    }
+  ]
+}
