@@ -39,6 +39,7 @@ body::after {
   pointer-events: none;
   z-index: 999;
 }
+body.nav-open { overflow: hidden; }
 a { color: inherit; }
 button { font: inherit; }
 .skip-link { position: fixed; top: 8px; left: 8px; z-index: 1001; background: var(--gold); color: var(--black); padding: 8px 14px; transform: translateY(-150%); }
@@ -55,6 +56,7 @@ button { font: inherit; }
   background: rgba(7, 6, 5, .96);
   border-bottom: 1px solid rgba(201, 168, 76, .10);
 }
+.mobile-header-bar,.nav-backdrop { display: none; }
 .site-nav {
   width: var(--stage);
   margin-inline: auto;
@@ -410,14 +412,40 @@ body.modal-open { overflow: hidden; }
   .image-break { width: min(92%,1000px); }
 }
 
+@media (max-width: 820px) {
+  :root { --nav-height: 54px; }
+  html,body { width: 100%; max-width: 100%; overflow-x: hidden; overflow-x: clip; }
+  .site-header { min-height: 54px; display: block; }
+  .mobile-header-bar { position: relative; z-index: 3; width: 100%; min-height: 54px; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 5px 14px 5px 18px; background: rgba(7,6,5,.97); }
+  .mobile-brand { min-width: 0; display: flex; align-items: baseline; gap: 9px; color: var(--gold); text-decoration: none; }
+  .mobile-brand strong { font-family: var(--serif); font-size: 20px; font-weight: 400; letter-spacing: 2px; line-height: 1; }
+  .mobile-brand span { color: var(--meta); font-size: 8px; font-weight: 400; letter-spacing: 2.2px; text-transform: uppercase; white-space: nowrap; }
+  .mudra-menu-button { width: 62px; min-height: 44px; display: flex; align-items: center; justify-content: flex-end; gap: 6px; padding: 0; border: 0; background: transparent; color: var(--gold); cursor: pointer; }
+  .mudra-menu-icon { width: 27px; height: 27px; fill: none; stroke: currentColor; stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round; transition: transform .35s cubic-bezier(.22,.61,.36,1); }
+  .mudra-menu-label { color: var(--meta); font-size: 7px; font-weight: 400; letter-spacing: 1.2px; text-transform: uppercase; writing-mode: vertical-rl; }
+  .site-header.nav-open .mudra-menu-icon { transform: rotate(-7deg) scale(.94); }
+  .nav-backdrop { position: fixed; z-index: 1; inset: 0; display: block; background: rgba(7,6,5,.76); opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .3s ease-out,visibility 0s linear .3s; }
+  .site-header.nav-open .nav-backdrop { opacity: 1; visibility: visible; pointer-events: auto; transition-delay: 0s; }
+  .site-nav { position: fixed; z-index: 2; top: 0; right: 0; width: min(84vw,330px); max-width: 100%; height: 100vh; height: 100dvh; margin: 0; padding: 76px 24px 28px; display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; background: var(--surface); border-left: 1px solid rgba(201,168,76,.24); box-shadow: -24px 0 70px rgba(0,0,0,.42); overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; white-space: normal; visibility: hidden; transform: translateX(102%); transition: transform .36s cubic-bezier(.22,.61,.36,1),visibility 0s linear .36s; }
+  .site-header.nav-open .site-nav { visibility: visible; transform: translateX(0); transition-delay: 0s; }
+  .site-nav::before { content: "Navigation"; display: block; margin: 0 0 15px; color: var(--gold); font-family: var(--serif); font-size: 24px; font-style: italic; letter-spacing: 1px; }
+  .site-nav::after { content: ""; width: 72px; height: 7px; margin: 22px auto 0; background: linear-gradient(90deg,transparent,rgba(201,168,76,.42),transparent) center 2px / 100% 1px no-repeat,radial-gradient(circle,rgba(201,168,76,.58) 0 1px,transparent 1.5px) center / 12px 4px repeat-x; }
+  .site-nav > span { display: none; }
+  .site-nav a { width: 100%; min-width: 0; min-height: 49px; margin: 0; padding: 13px 2px; justify-content: space-between; border-bottom: 1px solid var(--border); color: var(--secondary); font-size: 10px; letter-spacing: 2px; white-space: normal; overflow-wrap: anywhere; }
+  .site-nav a::before { content: "◇"; order: 2; color: var(--gold-muted); font-size: 8px; opacity: .34; }
+  .site-nav a::after { right: auto; width: 34px; transform-origin: left; }
+  .site-nav a.active::before { opacity: .9; }
+  .site-nav a:hover,.site-nav a:focus-visible { color: var(--gold); }
+}
+
 @media (max-width: 640px) {
   :root { --stage: 100%; }
   html { scroll-padding-top: calc(var(--nav-height,54px) + 16px); }
   body { font-size: 16px; line-height: 1.85; }
   .site-header { min-height: 54px; }
-  .site-nav { padding-inline: 8px; }
-  .site-nav a { margin: 0 9px; font-size: 10px; letter-spacing: 1.6px; }
-  .page { padding-inline: 18px; }
+  .page { width: 100%; max-width: 100%; padding-inline: 18px; }
+  main,section,figure,.compact-section,.tiers,.tier,.tax-highlight,.payment-upi,.event-facts,.council-grid { min-width: 0; max-width: 100%; }
+  img,svg { max-width: 100%; }
   .section { padding: 64px 0; }
   .hero { min-height: calc(100svh - 54px); padding: 52px 0 62px; }
   .institution-mark { margin-bottom: 34px; }
@@ -429,17 +457,18 @@ body.modal-open { overflow: hidden; }
   .long-sep { margin: 42px auto; }
   .programs { gap: 5px 11px; }
   .programs span { font-size: 10px; letter-spacing: 1.4px; }
-  .stats { gap: 34px; }
+  .stats { width: 100%; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 18px; }
   .stats strong { font-size: 37px; }
   .stats span { font-size: 9px; letter-spacing: 2px; }
-  .trust-line span { font-size: 10px; letter-spacing: 1.5px; }
+  .trust-line span { max-width: 100%; padding-inline: 12px; font-size: 10px; letter-spacing: 1.5px; overflow-wrap: anywhere; }
   .image-break, .teacher-image { width: 100%; margin-inline: auto; }
   .image-frame { --portrait-frame-inset: 6px; }
   .image-break img { min-height: 0; object-fit: contain; }
   .portrait-image img { max-height: min(72svh,680px); }
   .image-break figcaption { margin-top: 12px; font-size: 17px; }
   .tiers { grid-template-columns: 1fr; gap: 14px; }
-  .tier, .tier-open { grid-column: auto; min-height: 0; padding: 32px 20px 28px; }
+  .tier, .tier-open { width: 100%; grid-column: auto; min-height: 0; padding: 32px 20px 28px; overflow: hidden; }
+  .tier-btn,.copy-button,.primary-action { max-width: 100%; padding-inline: 28px; overflow-wrap: anywhere; }
   .tier-details { font-size: 13px; }
   .payment-upi { padding: 31px 18px; }
   .payment-instruction { font-size: 17px; }
@@ -449,18 +478,22 @@ body.modal-open { overflow: hidden; }
   .event-facts div:last-child { border-bottom: 0; }
   .transaction-overlay { padding: 16px; display: flex; align-items: flex-end; }
   .transaction-overlay[hidden] { display: none; }
-  .transaction-dialog { width: 100%; max-height: calc(100svh - 32px); min-height: min(620px,calc(100svh - 32px)); margin: 0 auto; padding: 28px 18px 22px; overflow-y: auto; }
+  .transaction-dialog { width: 100%; min-width: 0; max-height: calc(100svh - 32px); min-height: min(620px,calc(100svh - 32px)); margin: 0 auto; padding: 28px 18px 22px; overflow-x: hidden; overflow-y: auto; }
   .transaction-progress { margin-right: 38px; overflow-x: hidden; }
-  .progress-step { font-size: 7px; letter-spacing: 1px; }
+  .progress-step { min-width: 0; font-size: 7px; letter-spacing: .7px; overflow-wrap: anywhere; }
   .form-grid,.attendees { grid-template-columns: 1fr; }
   .field.full,.check-field,.attendees,.attendees-title { grid-column: auto; }
+  .choice { grid-template-columns: minmax(0,1fr) auto; }
+  .choice strong,.choice small { overflow-wrap: anywhere; }
   .payment-options { grid-template-columns: 1fr; }
   .payment-option { min-height: 0; }
   .payment-option.qr-option { text-align: center; }
   .modal-actions { position: sticky; bottom: -22px; margin-inline: -18px; padding: 15px 18px 0; background: linear-gradient(transparent,var(--surface) 16px); }
-  .modal-button { flex: 1; }
+  .modal-button { min-width: 0; flex: 1 1 100%; overflow-wrap: anywhere; }
   .upi-payment-actions { flex-direction: column; }
-  .upi-action { min-height: 84px; flex: auto; }
+  .upi-action { width: 100%; min-width: 0; min-height: 84px; flex: auto; }
+  .upi-action > span { min-width: 0; }
+  .upi-action strong,.upi-action small { overflow-wrap: anywhere; }
   .upi-qr-trigger { order: 0; }
   .upi-intent-trigger { order: -1; }
   .mobile-payment-label { display: inline; }
@@ -468,11 +501,24 @@ body.modal-open { overflow: hidden; }
   .upi-qr-overlay { align-items: flex-end; padding: 16px; }
   .upi-qr-dialog { max-height: calc(100svh - 32px); padding: 31px 18px 20px; overflow-y: auto; }
   .fake-qr.upi-qr-code { width: min(46vw,170px); height: min(46vw,170px); }
-  .summary-row { grid-template-columns: 34% 66%; }
+  .summary-row { grid-template-columns: minmax(0,34%) minmax(0,66%); gap: 0; }
+  .ticket-choice { grid-template-columns: minmax(0,1fr) auto; }
+  .ticket-choice h3 { overflow-wrap: anywhere; }
+  .quantity { gap: 8px; }
+  .developer-controls-body button { max-width: 100%; overflow-wrap: anywhere; }
   .acknowledgement,.demo-ticket { padding: 24px 14px; }
   .council-grid { grid-template-columns: 1fr; }
   .council-grid article { padding: 20px 6px 21px; }
-  footer { padding-inline: 18px; }
+  footer { width: 100%; max-width: 100%; padding-inline: 18px; overflow-wrap: anywhere; }
+}
+
+@media (max-width: 340px) {
+  .mobile-brand span { display: none; }
+  .page { padding-inline: 14px; }
+  .transaction-overlay,.upi-qr-overlay { padding: 10px; }
+  .transaction-dialog,.upi-qr-dialog { max-height: calc(100svh - 20px); }
+  .stats { gap: 10px; }
+  .stats strong { font-size: 33px; }
 }
 
 @media (hover: none), (pointer: coarse) {
@@ -484,6 +530,7 @@ body.modal-open { overflow: hidden; }
   .motion-ready .reveal, .motion-ready .line-reveal, .motion-ready .emblem span { opacity: 1; transform: none; transition: none; }
   .image-break img, .tier, .tier::before, .tier-btn, .tier-btn::after, .copy-button, .copy-button::after, .primary-action, .primary-action::after { transition: none; }
   .site-nav a::after { transition: none; }
+  .mudra-menu-icon,.site-nav,.nav-backdrop { transition: none; }
   .payment-status--waiting .payment-status-dot { animation: none; }
   .upi-action { transition: none; }
   .cursor-shimmer { display: none; }

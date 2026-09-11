@@ -4,13 +4,57 @@ const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').match
 const header = document.querySelector('.site-header');
 const nav = document.querySelector('.site-nav');
 const links = [...nav.querySelectorAll('a')];
+const menuButton = document.querySelector('.mudra-menu-button');
+const menuLabel = menuButton.querySelector('.mudra-menu-label');
+const mobileBrand = document.querySelector('.mobile-brand');
+const navBackdrop = document.querySelector('.nav-backdrop');
+const main = document.querySelector('main');
+const footer = document.querySelector('footer');
+const mobileNavQuery = window.matchMedia('(max-width: 820px)');
 const sections = [...document.querySelectorAll('[data-section]')];
 const sectionById = new Map(sections.map(section => [section.id, section]));
 let isProgrammaticScroll = false;
 let scrollEndTimer = 0;
+let mobileMenuOpen = false;
 
 document.documentElement.classList.add('motion-ready');
 initTransactions();
+
+const setMobileMenu = (open, restoreFocus = false) => {
+  mobileMenuOpen = Boolean(open && mobileNavQuery.matches);
+  header.classList.toggle('nav-open', mobileMenuOpen);
+  document.body.classList.toggle('nav-open', mobileMenuOpen);
+  menuButton.setAttribute('aria-expanded', String(mobileMenuOpen));
+  menuButton.setAttribute('aria-label', mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu');
+  menuLabel.textContent = mobileMenuOpen ? 'Close' : 'Menu';
+  nav.inert = mobileNavQuery.matches && !mobileMenuOpen;
+  main.inert = mobileMenuOpen;
+  footer.inert = mobileMenuOpen;
+  if (mobileMenuOpen) requestAnimationFrame(() => (links.find(link => link.classList.contains('active')) || links[0])?.focus({ preventScroll: true }));
+  else if (restoreFocus) menuButton.focus({ preventScroll: true });
+};
+
+const syncMobileNavigation = () => setMobileMenu(false, false);
+syncMobileNavigation();
+if (mobileNavQuery.addEventListener) mobileNavQuery.addEventListener('change', syncMobileNavigation);
+else mobileNavQuery.addListener(syncMobileNavigation);
+
+menuButton.addEventListener('click', () => setMobileMenu(!mobileMenuOpen, mobileMenuOpen));
+navBackdrop.addEventListener('click', () => setMobileMenu(false, true));
+document.addEventListener('keydown', event => {
+  if (!mobileMenuOpen) return;
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    setMobileMenu(false, true);
+    return;
+  }
+  if (event.key !== 'Tab') return;
+  const focusableMenuItems = [menuButton,...links].filter(element => !element.inert && element.offsetParent !== null);
+  const first = focusableMenuItems[0];
+  const last = focusableMenuItems.at(-1);
+  if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+  else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+});
 
 const keepTabVisible = link => {
   const left = link.offsetLeft;
@@ -59,8 +103,15 @@ links.forEach(link => link.addEventListener('click', event => {
   const target = sectionById.get(link.hash.slice(1));
   if (!target) return;
   event.preventDefault();
+  if (mobileMenuOpen) setMobileMenu(false, false);
   scrollToSection(target);
 }));
+
+mobileBrand.addEventListener('click', event => {
+  event.preventDefault();
+  if (mobileMenuOpen) setMobileMenu(false, false);
+  scrollToSection(sectionById.get('home'));
+});
 
 const intersecting = new Map();
 const activateNearestSection = () => {

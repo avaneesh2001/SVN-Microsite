@@ -19,7 +19,19 @@
   <a class="skip-link" href="#main">Skip to content</a>
 
   <header class="site-header">
-    <nav class="site-nav" aria-label="Primary navigation">
+    <div class="mobile-header-bar">
+      <a class="mobile-brand" href="#home" aria-label="Sangeet Vidya Niketan — Golden Circle, home">
+        <strong>SVN</strong><span>Golden Circle</span>
+      </a>
+      <button class="mudra-menu-button" type="button" aria-label="Open navigation menu" aria-expanded="false" aria-controls="primary-navigation">
+        <svg class="mudra-menu-icon" viewBox="0 0 32 32" aria-hidden="true">
+          <path d="M10.5 18.5V9.2c0-1 .7-1.7 1.6-1.7s1.6.7 1.6 1.7v6.1-8.1c0-1 .7-1.7 1.6-1.7s1.6.7 1.6 1.7v8.1-6.8c0-1 .7-1.7 1.6-1.7s1.6.7 1.6 1.7v8.2-4.8c0-1 .7-1.7 1.6-1.7s1.6.7 1.6 1.7v7.2c0 5-3.4 8.6-8.2 8.6-4.2 0-7-2.2-8.7-6.1l-1.2-2.7c-.4-.9 0-1.9.9-2.3.8-.4 1.7 0 2.2.7l2.7 4.3"/>
+          <circle cx="15.3" cy="21.1" r="2.1"/>
+        </svg>
+        <span class="mudra-menu-label">Menu</span>
+      </button>
+    </div>
+    <nav class="site-nav" id="primary-navigation" aria-label="Primary navigation">
       <a class="active" aria-current="page" href="#home">Home</a><span aria-hidden="true">·</span>
       <a href="#institution">Institution</a><span aria-hidden="true">·</span>
       <a href="#impact">Impact</a><span aria-hidden="true">·</span>
@@ -28,6 +40,7 @@
       <a href="#contribute">Contribute</a><span aria-hidden="true">·</span>
       <a href="#advisory">Advisory Council</a>
     </nav>
+    <div class="nav-backdrop" aria-hidden="true"></div>
   </header>
 
   <main id="main" class="page">
