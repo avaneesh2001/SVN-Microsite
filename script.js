@@ -207,20 +207,3 @@ if (precisePointer && !reduceMotion) {
   startShimmer();
 }
 
-document.querySelector('.copy-button').addEventListener('click', async event => {
-  const button = event.currentTarget;
-  const originalLabel = button.textContent;
-  const status = document.querySelector('.copy-status');
-  try {
-    await navigator.clipboard.writeText(button.dataset.copy);
-    button.textContent = 'Copied';
-    status.textContent = 'UPI ID copied to your clipboard.';
-  } catch {
-    const range = document.createRange();
-    range.selectNode(document.querySelector('#upi-id'));
-    window.getSelection().removeAllRanges();
-    window.getSelection().addRange(range);
-    status.textContent = 'UPI ID selected — copy it from your browser.';
-  }
-  window.setTimeout(() => { button.textContent = originalLabel; status.textContent = ''; }, 3000);
-});

@@ -93,9 +93,9 @@ function DeveloperPaymentControls() {
 
 export function createDonation() {
   return {
-    type: 'donation', step: 0, screen: 'flow', dirty: false,
+    type: 'donation', contributionType: 'GENERAL_CONTRIBUTION', step: 0, screen: 'flow', dirty: false,
     donation: { tier: 'General Contribution', amount: 0, otherAmount: '' },
-    contact: { name: '', email: '', mobile: '', city: '', pan: '', message: '', acknowledgement: true },
+    contact: { name: '', email: '', mobile: '', acknowledgement: true },
     demoReference: ''
   };
 }
@@ -104,9 +104,9 @@ export function createMembership(tierCode) {
   const tier = MEMBERSHIP_CONFIG[tierCode];
   if (!tier) throw new Error('Unknown membership tier');
   return {
-    type: 'membership', step: 0, screen: 'flow', dirty: false,
+    type: 'membership', contributionType: 'GOLDEN_CIRCLE_MEMBERSHIP', step: 0, screen: 'flow', dirty: false,
     membership: { membership_tier: tier.code, membership_amount: tier.amount, membership_start_date: '', membership_expiry_date: '', membership_status: 'pending', donor_id: '', donation_id: '', receipt_number: '', tierCode: tier.code, tierName: tier.name, amount: tier.amount, benefits: tier.benefits },
-    contact: { name: '', email: '', mobile: '', city: '', pan: '', message: '', acknowledgement: true },
+    contact: { name: '', email: '', mobile: '', acknowledgement: true },
     demoReference: '', receiptNumber: ''
   };
 }
@@ -122,7 +122,7 @@ export function createEventBooking() {
 
 const stepNames = () => transaction.type === 'event_booking'
   ? ['Tickets', 'Details', 'Review', 'Payment']
-  : ['Contribution', 'Details', 'Review', 'Payment'];
+  : ['Contribution', 'Supporter Details', 'Review', 'Payment'];
 
 const renderProgress = () => {
   if (transaction.screen === 'discard') { progress.innerHTML = ''; return; }
@@ -215,7 +215,7 @@ const bindLiveFields = target => {
 const renderDonationDetails = () => {
   const c = transaction.contact;
   const membership = transaction.type === 'membership';
-  setView(`<p class="transaction-kicker">${membership ? 'Golden Circle Membership' : 'General Contribution'}</p><h2 class="transaction-heading" id="transaction-title" tabindex="-1">${membership ? 'Member Details' : 'Donor Details'}</h2><p class="transaction-lede">These details remain only in this open browser session and are not submitted.</p><form class="form-grid" id="donor-form" novalidate>${contactField('name','Full Name','text',true,c.name,'autocomplete="name"')}${contactField('email','Email','email',true,c.email,'autocomplete="email"')}${contactField('mobile','Mobile Number','tel',true,c.mobile,'autocomplete="tel" inputmode="tel" pattern="[0-9+ ()-]{8,18}"')}${contactField('city','City','text',true,c.city,'autocomplete="address-level2"')}${contactField('pan','PAN','text',false,c.pan,'maxlength="10"')}${contactField('message','Message / dedication','text',false,c.message)}<label class="check-field"><input type="checkbox" name="acknowledgement" ${c.acknowledgement ? 'checked' : ''}>I would like to receive an acknowledgement by email</label></form><p class="form-error" role="alert" aria-live="polite"></p>${buttons(membership ? 'Review Membership' : 'Review Contribution','review-donation','Back','back')}`);
+  setView(`<p class="transaction-kicker">${membership ? 'Golden Circle Membership' : 'General Contribution'}</p><h2 class="transaction-heading" id="transaction-title" tabindex="-1">Supporter Details</h2><p class="transaction-lede">Enter the details for your contribution receipt.</p><form class="form-grid" id="donor-form" novalidate>${contactField('name','Full Name','text',true,c.name,'autocomplete="name"')}${contactField('email','Email','email',true,c.email,'autocomplete="email"')}${contactField('mobile','Mobile Number','tel',true,c.mobile,'autocomplete="tel" inputmode="tel" pattern="[0-9+ ()-]{8,18}"')}<label class="check-field"><input type="checkbox" name="acknowledgement" ${c.acknowledgement ? 'checked' : ''}>I would like to receive an acknowledgement by email</label><details class="tax-note"><summary>80G information</summary><p>Any eligible 80G amount will follow SVN's confirmed accounting policy. Tax-certificate details can be collected separately when required.</p></details></form><p class="form-error" role="alert" aria-live="polite"></p>${buttons('Review Contribution','review-donation','Back','back')}`);
   bindLiveFields(c);
   content.querySelector('[data-action="back"]').addEventListener('click', () => { transaction.step = 0; renderCurrent(); });
   content.querySelector('[data-action="review-donation"]').addEventListener('click', () => {
@@ -230,7 +230,7 @@ const renderDonationReview = () => {
   const membership = transaction.type === 'membership';
   const amount = membership ? transaction.membership.amount : transaction.donation.amount;
   const opening = membership ? summaryRow('Membership tier',transaction.membership.tierName) : summaryRow('Contribution type','General Contribution');
-  setView(`<p class="transaction-kicker">${membership ? 'Golden Circle Membership' : 'General Contribution'}</p><h2 class="transaction-heading" id="transaction-title" tabindex="-1">${membership ? 'Membership Summary' : 'Contribution Summary'}</h2><div class="summary">${opening}${summaryRow('Amount',formatINR(amount),'summary-amount')}${summaryRow(membership ? 'Member' : 'Donor',c.name)}${summaryRow('Mobile',c.mobile)}${emailRow(c.email)}${summaryRow('City',c.city)}${c.pan ? summaryRow('PAN',c.pan.toUpperCase()) : ''}${c.message ? summaryRow('Dedication',c.message) : ''}</div>${membership ? '<p class="membership-validity">The displayed membership amount is fixed by the selected tier and cannot be edited in checkout.</p>' : ''}${buttons('Proceed to Payment','payment','Edit Details','edit')}`);
+  setView(`<p class="transaction-kicker">${membership ? 'Golden Circle Membership' : 'General Contribution'}</p><h2 class="transaction-heading" id="transaction-title" tabindex="-1">Contribution Summary</h2><div class="summary">${opening}${summaryRow('Contribution Amount',formatINR(amount),'summary-amount')}${summaryRow('Supporter',c.name)}${summaryRow('Mobile',c.mobile)}${emailRow(c.email)}</div>${membership ? '<p class="membership-validity">The displayed membership amount is fixed by the selected tier and cannot be edited in checkout.</p>' : ''}${buttons('Proceed to Payment','payment','Edit Details','edit')}`);
   content.querySelector('[data-action="edit"]').addEventListener('click', () => { transaction.step = 1; renderCurrent(); });
   content.querySelector('[data-action="payment"]').addEventListener('click', event => prepareCheckout(event.currentTarget));
 };
@@ -455,7 +455,7 @@ const renderAcknowledgement = () => {
   const membership = transaction.type === 'membership';
   const amount = membership ? transaction.membership.amount : transaction.donation.amount;
   const typeRows = membership ? `${summaryRow('Membership',transaction.membership.tierName)}${summaryRow('Receipt number',transaction.receiptNumber)}` : summaryRow('Contribution','General Contribution');
-  setView(`<p class="transaction-kicker">Preview</p><h2 class="transaction-heading" id="transaction-title" tabindex="-1">${membership ? 'Sample Membership Receipt' : 'Sample Contribution Acknowledgement'}</h2><div class="acknowledgement"><p class="ticket-brand">Sangeet Vidya Niketan · The Golden Circle</p><h3 class="ticket-title">Thank You</h3><p>This sample acknowledges a demonstration ${membership ? 'membership payment' : 'contribution'} from <strong>${escapeHTML(transaction.contact.name)}</strong>.</p><div class="summary">${typeRows}${summaryRow('Demo amount',formatINR(amount))}${summaryRow('Reference',transaction.demoReference)}</div><p class="ticket-warning">Sample ordinary receipt only · Not an official 80G receipt</p></div>${buttons('Done','done','Back','back-success')}`);
+  setView(`<p class="transaction-kicker">Preview</p><h2 class="transaction-heading" id="transaction-title" tabindex="-1">Payment Receipt</h2><div class="acknowledgement"><p class="ticket-brand">Sangeet Vidya Niketan · The Golden Circle</p><h3 class="ticket-title">Thank You</h3><p>This sample receipt acknowledges a demonstration contribution from <strong>${escapeHTML(transaction.contact.name)}</strong>.</p><div class="summary">${typeRows}${summaryRow('Contribution Amount',formatINR(amount))}${summaryRow('Reference',transaction.demoReference)}</div><p class="ticket-warning">Sample ordinary receipt only · Not an official 80G receipt</p></div>${buttons('Done','done','Back','back-success')}`);
   content.querySelector('[data-action="done"]').addEventListener('click', () => closeTransaction(true));
   content.querySelector('[data-action="back-success"]').addEventListener('click', () => { transaction.screen = 'success'; renderCurrent(); });
 };
@@ -538,12 +538,25 @@ qrOverlay.addEventListener('mousedown', event => { if (event.target === qrOverla
 
 export function initTransactions() {
   const membershipGrid = document.querySelector('#membership-tiers');
-  membershipGrid.innerHTML = membershipData.tiers.map(tier => `<article class="tier ${tier.code === 'LEGACY_500000' ? 'tier-open legacy-tier' : ''}">${tier.badge ? `<span class="tier-badge">${escapeHTML(tier.badge)}</span>` : ''}<h2>${escapeHTML(tier.name)}</h2><p class="tier-amount">${formatINR(tier.amount)}</p><p class="tier-impact">Annual Golden Circle Membership</p><p class="benefits-label">Includes</p><ul class="tier-benefits">${tier.benefitLabels.map(benefit => `<li>${escapeHTML(benefit)}</li>`).join('')}</ul><button class="tier-btn membership-trigger" type="button" data-membership-tier="${tier.code}">${escapeHTML(tier.cta)}<br>${formatINR(tier.amount)}</button></article>`).join('');
-  document.querySelector('#event-description').textContent = EVENT_CONFIG.description;
-  document.querySelector('#event-date').textContent = EVENT_CONFIG.date;
-  document.querySelector('#event-time').textContent = EVENT_CONFIG.time;
-  document.querySelector('#event-venue').textContent = EVENT_CONFIG.venue;
+  membershipGrid.innerHTML = membershipData.tiers.map(tier => `<article class="tier ${tier.code === 'LEGACY_500000' ? 'tier-open legacy-tier' : ''}">${tier.badge ? `<span class="tier-badge">${escapeHTML(tier.badge)}</span>` : ''}<h2>${escapeHTML(tier.name)}</h2><p class="tier-amount">${formatINR(tier.amount)}</p><p class="tier-impact">Annual Golden Circle Membership</p><p class="benefits-label">Includes</p><ul class="tier-benefits">${tier.benefitLabels.map(benefit => `<li>${escapeHTML(benefit)}</li>`).join('')}</ul><button class="tier-btn membership-trigger" type="button" data-membership-tier="${tier.code}">DONATE</button></article>`).join('');
+  let selectedTier = '';
+  document.querySelectorAll('.contribution-tier').forEach(trigger => trigger.addEventListener('click', () => {
+    selectedTier = trigger.dataset.membershipTier;
+    document.querySelectorAll('.contribution-tier').forEach(option => option.setAttribute('aria-pressed', String(option === trigger)));
+    document.querySelector('#other-contribution-amount').value = '';
+  }));
+  document.querySelector('#other-contribution-amount').addEventListener('input', () => {
+    selectedTier = '';
+    document.querySelectorAll('.contribution-tier').forEach(option => option.setAttribute('aria-pressed', 'false'));
+  });
   document.querySelectorAll('.membership-trigger').forEach(trigger => trigger.addEventListener('click', () => openTransaction(createMembership(trigger.dataset.membershipTier), trigger)));
-  document.querySelectorAll('.donation-trigger').forEach(trigger => trigger.addEventListener('click', () => openTransaction(createDonation(), trigger)));
-  document.querySelector('.event-trigger').addEventListener('click', event => openTransaction(createEventBooking(), event.currentTarget));
+  document.querySelector('.contribute-now-trigger').addEventListener('click', event => {
+    const otherAmount = Number(document.querySelector('#other-contribution-amount').value || 0);
+    const nextTransaction = selectedTier ? createMembership(selectedTier) : createDonation();
+    if (!selectedTier && otherAmount) {
+      nextTransaction.donation.otherAmount = String(otherAmount);
+      nextTransaction.donation.amount = otherAmount;
+    }
+    openTransaction(nextTransaction, event.currentTarget);
+  });
 }

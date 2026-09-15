@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS donors (
   full_name TEXT NOT NULL,
   email TEXT NOT NULL,
   mobile TEXT NOT NULL,
-  city TEXT NOT NULL,
+  city TEXT,
   pan TEXT,
   message TEXT,
   created_at TEXT NOT NULL
@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS donors (
 CREATE TABLE IF NOT EXISTS donations (
   id TEXT PRIMARY KEY,
   donor_id TEXT NOT NULL REFERENCES donors(id),
-  transaction_type TEXT NOT NULL CHECK(transaction_type IN ('membership','general_contribution')),
+  transaction_type TEXT NOT NULL CHECK(transaction_type IN ('GOLDEN_CIRCLE_MEMBERSHIP','GENERAL_CONTRIBUTION')),
   amount INTEGER NOT NULL CHECK(amount >= 100),
   currency TEXT NOT NULL DEFAULT 'INR',
   payment_status TEXT NOT NULL DEFAULT 'pending',

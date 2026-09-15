@@ -23,7 +23,7 @@ const initialise = async () => {
   await run('INSERT OR REPLACE INTO organisation_settings(setting_key,setting_value_json,updated_at) VALUES(?,?,?)', ['tax_receipt_policy',JSON.stringify(ORGANISATION_SETTINGS.tax_receipt_policy),now()]);
 };
 
-const validateContact = contact => contact && ['name','email','mobile','city'].every(key => typeof contact[key] === 'string' && contact[key].trim());
+const validateContact = contact => contact && ['name','email','mobile'].every(key => typeof contact[key] === 'string' && contact[key].trim());
 
 app.disable('x-powered-by');
 app.use(express.json({ limit: '32kb' }));
@@ -40,8 +40,8 @@ app.post('/api/checkouts/membership', async (request, response, next) => {
     await run('BEGIN IMMEDIATE');
     try {
       const contact = request.body.contact;
-      await run('INSERT INTO donors(id,full_name,email,mobile,city,pan,message,created_at) VALUES(?,?,?,?,?,?,?,?)',[donorId,contact.name.trim(),contact.email.trim(),contact.mobile.trim(),contact.city.trim(),contact.pan?.trim()||null,contact.message?.trim()||null,createdAt]);
-      await run('INSERT INTO donations(id,donor_id,transaction_type,amount,payment_status,created_at) VALUES(?,?,?,?,?,?)',[donationId,donorId,'membership',tier.amount,'pending',createdAt]);
+      await run('INSERT INTO donors(id,full_name,email,mobile,city,pan,message,created_at) VALUES(?,?,?,?,?,?,?,?)',[donorId,contact.name.trim(),contact.email.trim(),contact.mobile.trim(),'','','',createdAt]);
+      await run('INSERT INTO donations(id,donor_id,transaction_type,amount,payment_status,created_at) VALUES(?,?,?,?,?,?)',[donationId,donorId,'GOLDEN_CIRCLE_MEMBERSHIP',tier.amount,'pending',createdAt]);
       await run('INSERT INTO memberships(id,membership_tier,membership_amount,membership_status,donor_id,donation_id,benefits_json,created_at) VALUES(?,?,?,?,?,?,?,?)',[membershipId,tier.code,tier.amount,'pending',donorId,donationId,JSON.stringify(tier.benefits),createdAt]);
       await run('COMMIT');
     } catch (error) { await run('ROLLBACK'); throw error; }
@@ -55,8 +55,8 @@ app.post('/api/checkouts/contribution', async (request, response, next) => {
     if (!Number.isInteger(amount) || amount < 100) return response.status(400).json({ error: 'INVALID_CONTRIBUTION_AMOUNT' });
     if (!validateContact(request.body.contact)) return response.status(400).json({ error: 'INVALID_CONTACT_DETAILS' });
     const donorId = id('donor'), donationId = id('donation'), createdAt = now(), contact = request.body.contact;
-    await run('INSERT INTO donors(id,full_name,email,mobile,city,pan,message,created_at) VALUES(?,?,?,?,?,?,?,?)',[donorId,contact.name.trim(),contact.email.trim(),contact.mobile.trim(),contact.city.trim(),contact.pan?.trim()||null,contact.message?.trim()||null,createdAt]);
-    await run('INSERT INTO donations(id,donor_id,transaction_type,amount,payment_status,created_at) VALUES(?,?,?,?,?,?)',[donationId,donorId,'general_contribution',amount,'pending',createdAt]);
+    await run('INSERT INTO donors(id,full_name,email,mobile,city,pan,message,created_at) VALUES(?,?,?,?,?,?,?,?)',[donorId,contact.name.trim(),contact.email.trim(),contact.mobile.trim(),'','','',createdAt]);
+    await run('INSERT INTO donations(id,donor_id,transaction_type,amount,payment_status,created_at) VALUES(?,?,?,?,?,?)',[donationId,donorId,'GENERAL_CONTRIBUTION',amount,'pending',createdAt]);
     response.status(201).json({ checkoutId: donationId, amount, currency: 'INR', paymentStatus: 'pending', paymentProvider: null, nextAction: 'PAYMENT_PROVIDER_CONFIGURATION_REQUIRED' });
   } catch (error) { next(error); }
 });
@@ -69,7 +69,7 @@ async function finalizeVerifiedPayment({ donationId, gatewayPaymentId }) {
   await run('BEGIN IMMEDIATE');
   try {
     await run('UPDATE donations SET payment_status=?,gateway_payment_id=?,receipt_number=?,verified_at=? WHERE id=?',['verified',gatewayPaymentId,receipt,verifiedAt,donationId]);
-    if (donation.transaction_type === 'membership') {
+    if (donation.transaction_type === 'GOLDEN_CIRCLE_MEMBERSHIP') {
       const start = new Date(verifiedAt), expiry = new Date(verifiedAt);
       expiry.setUTCFullYear(expiry.getUTCFullYear()+1); expiry.setUTCDate(expiry.getUTCDate()-1);
       await run('UPDATE memberships SET membership_start_date=?,membership_expiry_date=?,membership_status=?,receipt_number=? WHERE donation_id=?',[start.toISOString().slice(0,10),expiry.toISOString().slice(0,10),'active',receipt,donationId]);
