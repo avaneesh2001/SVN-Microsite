@@ -126,7 +126,7 @@ const stepNames = () => transaction.type === 'event_booking'
 
 const renderProgress = () => {
   if (transaction.screen === 'discard') { progress.innerHTML = ''; return; }
-  progress.innerHTML = stepNames().map((name, index) => `<span class="progress-step ${index < transaction.step ? 'complete' : index === transaction.step ? 'active' : ''}">${name}</span>`).join('');
+  progress.innerHTML = stepNames().map((name, index) => `<span class="progress-step ${index < transaction.step ? 'complete' : index === transaction.step ? 'active' : ''}"><span class="desktop-progress-label">${name}</span><span class="mobile-progress-label">${name === 'Contribution' ? 'Amount' : name}</span></span>`).join('');
 };
 
 const setView = markup => {
