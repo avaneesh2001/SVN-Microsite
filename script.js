@@ -20,6 +20,44 @@ let mobileMenuOpen = false;
 document.documentElement.classList.add('motion-ready');
 initTransactions();
 
+// Drift across a single sequence; reverse at its ends rather than cloning photographs.
+const initCarousel = carousel => {
+  const viewport = carousel.querySelector('.carousel-viewport');
+  let position = 0;
+  let direction = 1;
+  let previousTime = 0;
+  let pausedUntil = 0;
+  let hovered = false;
+  const pause = () => { pausedUntil = performance.now() + 4500; };
+  carousel.addEventListener('pointerdown', pause);
+  carousel.addEventListener('wheel', pause, { passive: true });
+  carousel.addEventListener('pointerenter', event => { if (event.pointerType === 'mouse') hovered = true; });
+  carousel.addEventListener('pointerleave', () => { hovered = false; });
+  carousel.addEventListener('keydown', event => {
+    if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+    event.preventDefault();
+    pause();
+    viewport.scrollBy({ left: event.key === 'ArrowRight' ? 220 : -220, behavior: 'smooth' });
+  });
+  const drift = time => {
+    const elapsed = previousTime ? Math.min(time - previousTime, 50) : 0;
+    previousTime = time;
+    if (!document.hidden && !hovered && !carousel.matches(':focus-within') && time > pausedUntil) {
+      const end = viewport.scrollWidth - viewport.clientWidth;
+      if (end > 0) {
+        position = Math.max(0, Math.min(end, position + direction * elapsed * .025));
+        viewport.scrollLeft = position;
+        if (viewport.scrollLeft >= end - 1) direction = -1;
+        else if (viewport.scrollLeft <= 0) direction = 1;
+      }
+    } else { position = viewport.scrollLeft; }
+    requestAnimationFrame(drift);
+  };
+  if (!reduceMotion) requestAnimationFrame(drift);
+};
+
+document.querySelectorAll('[data-carousel]').forEach(initCarousel);
+
 const setMobileMenu = (open, restoreFocus = false) => {
   mobileMenuOpen = Boolean(open && mobileNavQuery.matches);
   header.classList.toggle('nav-open', mobileMenuOpen);

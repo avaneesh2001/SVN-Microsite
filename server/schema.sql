@@ -45,3 +45,15 @@ CREATE TABLE IF NOT EXISTS organisation_settings (
   setting_value_json TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
+
+-- Anonymous checkout capability; personal details are supplied only on opt-in.
+CREATE TABLE IF NOT EXISTS checkout_access (
+  donation_id TEXT PRIMARY KEY REFERENCES donations(id),
+  token_hash TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS tax_receipt_requests (
+  donation_id TEXT PRIMARY KEY REFERENCES donations(id),
+  details_json TEXT NOT NULL,
+  requested_at TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending_review'
+);

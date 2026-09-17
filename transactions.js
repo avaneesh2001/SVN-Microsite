@@ -28,7 +28,7 @@ export const UPI_PAYMENT_CONFIG = Object.freeze({
   transactionReferencePrefix: 'GC-TEST',
   transactionNote: 'Contribution to Sangeet Vidya Niketan',
   currency: 'INR',
-  showDeveloperControls: true
+  showDeveloperControls: false
 });
 
 const overlay = document.querySelector('#transaction-overlay');
@@ -36,14 +36,9 @@ const dialog = overlay.querySelector('.transaction-dialog');
 const progress = overlay.querySelector('.transaction-progress');
 const content = overlay.querySelector('.transaction-content');
 const closeButton = overlay.querySelector('.transaction-close');
-const qrOverlay = document.querySelector('#upi-qr-overlay');
-const qrDialog = qrOverlay.querySelector('.upi-qr-dialog');
-const qrContent = qrOverlay.querySelector('.upi-qr-content');
-const qrCloseButton = qrOverlay.querySelector('.upi-qr-close');
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 let transaction = null;
 let returnFocus = null;
-let qrReturnFocus = null;
 let intentFallbackTimer = 0;
 
 const formatINR = amount => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(Number(amount || 0));
@@ -75,14 +70,9 @@ export const PaymentStatus = ({ state = 'waiting', message = '' } = {}) => {
   return `<div class="payment-status payment-status--${state}" role="status" aria-live="polite" data-payment-status="${state}"><span class="payment-status-dot" aria-hidden="true"></span><div><strong>${label}</strong>${message ? `<span>${escapeHTML(message)}</span>` : ''}</div></div>`;
 };
 
-export const UPIIntentButton = () => `<button class="upi-action upi-intent-trigger" type="button"><span class="upi-action-index" aria-hidden="true">01</span><span><strong><span class="mobile-payment-label">Open UPI App</span><span class="desktop-payment-label">Pay via UPI App</span></strong><small><span class="mobile-payment-label">Choose an installed UPI app</span><span class="desktop-payment-label">Open UPI app if supported</span></small></span><span class="upi-action-arrow" aria-hidden="true">↗</span></button>`;
+export const UPIIntentButton = () => `<button class="upi-action upi-intent-trigger" type="button"><span><strong>PAY BY UPI</strong></span><span class="upi-action-arrow" aria-hidden="true">↗</span></button>`;
 
-export const UPIQRCode = ({ amount, transactionReference, vpa, payeeName, note, currency = 'INR' }) => {
-  const futureQrPayload = createUPIIntent({ vpa, payeeName, transactionReference, amount, note, currency });
-  return `<p class="transaction-kicker">Pay by UPI</p><h2 class="upi-qr-heading" id="upi-qr-title">Pay ${formatINR(amount)}</h2><p class="upi-placeholder-label">Dummy QR code · Test only</p><div class="fake-qr upi-qr-code" data-placeholder="true" data-qr-payload="${escapeHTML(futureQrPayload)}" role="img" aria-label="Non-scannable placeholder QR code for demonstration only"></div><p class="upi-qr-scan" id="upi-qr-description">Scan using any UPI app</p><p class="upi-app-list">Google Pay <span>•</span> BHIM <span>•</span> PhonePe <span>•</span> Any UPI App</p><p class="upi-reference">Test reference ${escapeHTML(transactionReference)}</p><div class="qr-payment-status">${PaymentStatus({ state: 'waiting', message: 'The QR is a placeholder and cannot be used for payment.' })}</div>${DeveloperPaymentControls()}<button class="modal-button upi-qr-cancel" type="button">Cancel</button>`;
-};
-
-export const UPIPaymentOptions = ({ amount }) => `<div class="upi-payment-panel"><div class="upi-payment-total"><span>Amount to pay</span><strong>${formatINR(amount)}</strong></div><div class="upi-payment-actions">${UPIIntentButton()}<button class="upi-action upi-qr-trigger" type="button"><span class="upi-action-index" aria-hidden="true">02</span><span><strong>Show UPI QR</strong><small>Placeholder QR · Not yet enabled</small></span><span class="upi-action-arrow" aria-hidden="true">＋</span></button></div><p class="upi-safety-note">The UPI app option uses the configured Sangeet Vidya Niketan account. Automatic verification is not connected, and the displayed QR remains a non-scannable placeholder.</p><div class="payment-status-region">${PaymentStatus({ state: 'waiting', message: 'Choose a payment option. Manual UPI payments cannot yet be verified automatically.' })}</div>${DeveloperPaymentControls()}</div>`;
+export const UPIPaymentOptions = ({ amount }) => `<div class="upi-payment-panel"><div class="upi-payment-total"><span>Amount to pay</span><strong>${formatINR(amount)}</strong></div><div class="upi-payment-actions">${UPIIntentButton()}</div><div class="payment-status-region">${PaymentStatus({ state: 'waiting', message: 'Automatic payment confirmation is not yet available.' })}</div></div>`;
 
 export const PaymentSuccess = ({ title, message }) => `<div class="status-mark" aria-hidden="true">✓</div><p class="transaction-kicker">Demo payment success</p><h2 class="transaction-heading" id="transaction-title" tabindex="-1">${escapeHTML(title)}</h2><p class="transaction-lede">${escapeHTML(message)}</p>`;
 
@@ -122,11 +112,11 @@ export function createEventBooking() {
 
 const stepNames = () => transaction.type === 'event_booking'
   ? ['Tickets', 'Details', 'Review', 'Payment']
-  : ['Contribution', 'Supporter Details', 'Review', 'Payment'];
+  : ['Contribution', 'Payment'];
 
 const renderProgress = () => {
-  if (transaction.screen === 'discard') { progress.innerHTML = ''; return; }
-  progress.innerHTML = stepNames().map((name, index) => `<span class="progress-step ${index < transaction.step ? 'complete' : index === transaction.step ? 'active' : ''}"><span class="desktop-progress-label">${name}</span><span class="mobile-progress-label">${name === 'Contribution' ? 'Amount' : name}</span></span>`).join('');
+  if (['discard', 'verified', 'receipt'].includes(transaction.screen)) { progress.innerHTML = ''; return; }
+  progress.innerHTML = stepNames().map((name, index) => `<span class="progress-step ${index < (transaction.type === 'event_booking' ? transaction.step : transaction.step === 3 ? 1 : 0) ? 'complete' : index === (transaction.type === 'event_booking' ? transaction.step : transaction.step === 3 ? 1 : 0) ? 'active' : ''}"><span class="desktop-progress-label">${name}</span><span class="mobile-progress-label">${name === 'Contribution' ? 'Amount' : name}</span></span>`).join('');
 };
 
 const setView = markup => {
@@ -148,6 +138,7 @@ const summaryRow = (label, value, className = '') => `<div class="summary-row"><
 const emailRow = email => `<div class="summary-row"><span>Email</span><strong><a href="mailto:${encodeURIComponent(email)}">${escapeHTML(email)}</a></strong></div>`;
 
 const prepareCheckout = async button => {
+  const checkoutTransaction = transaction;
   const originalLabel = button.textContent;
   button.disabled = true;
   button.textContent = 'Preparing…';
@@ -155,30 +146,36 @@ const prepareCheckout = async button => {
     const membership = transaction.type === 'membership';
     const response = await fetch(membership ? '/api/checkouts/membership' : '/api/checkouts/contribution', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(membership ? { membershipTier: transaction.membership.tierCode, contact: transaction.contact } : { amount: transaction.donation.amount, contact: transaction.contact })
+      body: JSON.stringify(membership ? { membershipTier: transaction.membership.tierCode } : { amount: transaction.donation.amount })
     });
     if (!response.ok) throw new Error('Checkout service unavailable');
-    transaction.checkout = await response.json();
+    const checkout = await response.json();
+    if (transaction !== checkoutTransaction) return;
+    transaction.checkout = checkout;
     if (membership) transaction.membership.amount = transaction.checkout.amount;
     else transaction.donation.amount = transaction.checkout.amount;
     transaction.checkoutUnavailable = false;
   } catch {
+    if (transaction !== checkoutTransaction) return;
     transaction.checkout = null;
     transaction.checkoutUnavailable = true;
   } finally {
     button.disabled = false;
     button.textContent = originalLabel;
   }
+  if (transaction !== checkoutTransaction) return;
   transaction.step = 3;
+  transaction.screen = 'flow';
   renderCurrent();
+  schedulePaymentCheck();
 };
 
 const renderDonationContribution = () => {
   if (transaction.type === 'membership') {
     const tier = MEMBERSHIP_CONFIG[transaction.membership.tierCode];
-    setView(`<p class="transaction-kicker">Golden Circle Membership</p><h2 class="transaction-heading" id="transaction-title" tabindex="-1">${tier.name}</h2><p class="fixed-membership-amount">${formatINR(tier.amount)}</p><p class="transaction-lede">Annual Golden Circle Membership</p><p class="field-label">Membership includes</p><ul class="modal-benefits">${tier.benefitLabels.map(benefit => `<li>${benefit}</li>`).join('')}</ul><p class="membership-validity">Golden Circle membership is valid for one year from the date of enrolment.</p><p class="form-error" role="alert" aria-live="polite"></p>${buttons('Continue','continue-donation')}`);
+    setView(`<p class="transaction-kicker">Golden Circle Membership</p><h2 class="transaction-heading" id="transaction-title" tabindex="-1">${tier.name}</h2><p class="fixed-membership-amount">${formatINR(tier.amount)}</p><p class="transaction-lede">${escapeHTML(tier.description)}</p><p class="field-label">Membership includes</p><ul class="modal-benefits">${tier.benefitLabels.map(benefit => `<li>${benefit}</li>`).join('')}</ul><p class="form-error" role="alert" aria-live="polite"></p>${buttons('Continue','continue-donation')}`);
   } else {
-    setView(`<p class="transaction-kicker">General Contribution</p><h2 class="transaction-heading" id="transaction-title" tabindex="-1">Make a Contribution</h2><p class="transaction-lede">Support Sangeet Vidya Niketan without enrolling in Golden Circle membership.</p><div class="field other-amount"><label for="other-donation">Contribution amount</label><input id="other-donation" type="number" inputmode="numeric" min="100" step="1" value="${escapeHTML(transaction.donation.otherAmount)}" placeholder="Minimum ₹100"></div><p class="general-contribution-warning">A contribution below ₹10,000 does not create Golden Circle membership.</p><p class="form-error" role="alert" aria-live="polite"></p>${buttons('Continue','continue-donation')}`);
+    setView(`<p class="transaction-kicker">General Contribution</p><h2 class="transaction-heading" id="transaction-title" tabindex="-1">Make a Contribution</h2><p class="transaction-lede">Support Sangeet Vidya Niketan without enrolling in Golden Circle membership.</p><div class="field other-amount"><label for="other-donation">Contribution amount</label><input id="other-donation" type="number" inputmode="numeric" min="100" step="1" value="${escapeHTML(transaction.donation.otherAmount)}" placeholder="Minimum ₹100"></div><p class="general-contribution-warning">A contribution below ₹11,000 does not create Golden Circle membership.</p><p class="form-error" role="alert" aria-live="polite"></p>${buttons('Continue','continue-donation')}`);
     content.querySelector('#other-donation').addEventListener('input', event => {
       transaction.donation.otherAmount = event.target.value;
       transaction.donation.amount = Number(event.target.value || 0);
@@ -187,11 +184,11 @@ const renderDonationContribution = () => {
   }
   content.querySelector('[data-action="continue-donation"]').addEventListener('click', () => {
     if (transaction.type === 'donation' && transaction.donation.amount < 100) {
-      content.querySelector('.form-error').textContent = 'Enter a demonstration amount of at least ₹100.';
+      content.querySelector('.form-error').textContent = 'Enter an amount of at least ₹100.';
       content.querySelector('#other-donation').focus();
       return;
     }
-    transaction.step = 1; transaction.dirty = true; renderCurrent();
+    transaction.dirty = true; prepareCheckout(content.querySelector('[data-action="continue-donation"]'));
   });
 };
 
@@ -210,29 +207,6 @@ const bindLiveFields = target => {
   content.querySelectorAll('input[type="checkbox"]').forEach(input => input.addEventListener('change', event => {
     target[event.target.name] = event.target.checked; transaction.dirty = true;
   }));
-};
-
-const renderDonationDetails = () => {
-  const c = transaction.contact;
-  const membership = transaction.type === 'membership';
-  setView(`<p class="transaction-kicker">${membership ? 'Golden Circle Membership' : 'General Contribution'}</p><h2 class="transaction-heading" id="transaction-title" tabindex="-1">Supporter Details</h2><p class="transaction-lede">Enter the details for your contribution receipt.</p><form class="form-grid" id="donor-form" novalidate>${contactField('name','Full Name','text',true,c.name,'autocomplete="name"')}${contactField('email','Email','email',true,c.email,'autocomplete="email"')}${contactField('mobile','Mobile Number','tel',true,c.mobile,'autocomplete="tel" inputmode="tel" pattern="[0-9+ ()-]{8,18}"')}<label class="check-field"><input type="checkbox" name="acknowledgement" ${c.acknowledgement ? 'checked' : ''}>I would like to receive an acknowledgement by email</label><details class="tax-note"><summary>80G information</summary><p>Any eligible 80G amount will follow SVN's confirmed accounting policy. Tax-certificate details can be collected separately when required.</p></details></form><p class="form-error" role="alert" aria-live="polite"></p>${buttons('Review Contribution','review-donation','Back','back')}`);
-  bindLiveFields(c);
-  content.querySelector('[data-action="back"]').addEventListener('click', () => { transaction.step = 0; renderCurrent(); });
-  content.querySelector('[data-action="review-donation"]').addEventListener('click', () => {
-    const form = content.querySelector('#donor-form');
-    if (!form.checkValidity()) { content.querySelector('.form-error').textContent = 'Please complete the required details correctly.'; form.reportValidity(); return; }
-    transaction.step = 2; renderCurrent();
-  });
-};
-
-const renderDonationReview = () => {
-  const c = transaction.contact;
-  const membership = transaction.type === 'membership';
-  const amount = membership ? transaction.membership.amount : transaction.donation.amount;
-  const opening = membership ? summaryRow('Membership tier',transaction.membership.tierName) : summaryRow('Contribution type','General Contribution');
-  setView(`<p class="transaction-kicker">${membership ? 'Golden Circle Membership' : 'General Contribution'}</p><h2 class="transaction-heading" id="transaction-title" tabindex="-1">Contribution Summary</h2><div class="summary">${opening}${summaryRow('Contribution Amount',formatINR(amount),'summary-amount')}${summaryRow('Supporter',c.name)}${summaryRow('Mobile',c.mobile)}${emailRow(c.email)}</div>${membership ? '<p class="membership-validity">The displayed membership amount is fixed by the selected tier and cannot be edited in checkout.</p>' : ''}${buttons('Proceed to Payment','payment','Edit Details','edit')}`);
-  content.querySelector('[data-action="edit"]').addEventListener('click', () => { transaction.step = 1; renderCurrent(); });
-  content.querySelector('[data-action="payment"]').addEventListener('click', event => prepareCheckout(event.currentTarget));
 };
 
 const renderTicketSelection = () => {
@@ -298,7 +272,7 @@ const currentUPIReference = () => {
 const updatePaymentStatus = (state, message) => {
   if (!transaction) return;
   transaction.paymentStatus = state;
-  document.querySelectorAll('.payment-status-region,.qr-payment-status').forEach(region => {
+  document.querySelectorAll('.payment-status-region').forEach(region => {
     if (region.offsetParent !== null) region.innerHTML = PaymentStatus({ state, message });
   });
 };
@@ -306,44 +280,12 @@ const updatePaymentStatus = (state, message) => {
 const bindDeveloperControls = root => {
   root.querySelectorAll('[data-action="simulate-success"]').forEach(button => button.addEventListener('click', () => {
     updatePaymentStatus('success', 'Developer simulation only. No gateway confirmation was received.');
-    closeQRCode(false);
     processPayment(transaction, 'success');
   }));
   root.querySelectorAll('[data-action="simulate-failure"]').forEach(button => button.addEventListener('click', () => {
     updatePaymentStatus('failed', 'Developer simulation only. No payment was captured.');
-    closeQRCode(false);
     processPayment(transaction, 'failure');
   }));
-};
-
-const closeQRCode = (restoreFocus = true) => {
-  if (qrOverlay.hidden) return;
-  window.clearTimeout(intentFallbackTimer);
-  qrOverlay.hidden = true;
-  qrContent.innerHTML = '';
-  dialog.inert = false;
-  overlay.removeAttribute('aria-hidden');
-  if (restoreFocus) qrReturnFocus?.focus({ preventScroll: true });
-  qrReturnFocus = null;
-};
-
-const openQRCode = trigger => {
-  if (!transaction) return;
-  qrReturnFocus = trigger || document.activeElement;
-  qrContent.innerHTML = UPIQRCode({
-    amount: currentPaymentAmount(),
-    transactionReference: currentUPIReference(),
-    vpa: UPI_PAYMENT_CONFIG.vpa,
-    payeeName: UPI_PAYMENT_CONFIG.payeeName,
-    note: UPI_PAYMENT_CONFIG.transactionNote,
-    currency: UPI_PAYMENT_CONFIG.currency
-  });
-  qrOverlay.hidden = false;
-  dialog.inert = true;
-  overlay.setAttribute('aria-hidden', 'true');
-  qrContent.querySelector('.upi-qr-cancel').addEventListener('click', () => closeQRCode(true));
-  bindDeveloperControls(qrContent);
-  requestAnimationFrame(() => qrDialog.focus({ preventScroll: true }));
 };
 
 const attemptUPIIntent = trigger => {
@@ -373,8 +315,7 @@ const attemptUPIIntent = trigger => {
   intentFallbackTimer = window.setTimeout(() => {
     document.removeEventListener('visibilitychange', noteAppSwitch);
     if (!transaction || transaction.step !== 3 || appOpened) return;
-    updatePaymentStatus('waiting', 'Open a UPI app on your phone and scan the QR code.');
-    openQRCode(trigger);
+    updatePaymentStatus('waiting', 'If no UPI app opened, please visit this page on a phone with a UPI app installed and tap PAY BY UPI.');
   }, 1400);
 };
 
@@ -384,15 +325,15 @@ const renderPayment = () => {
   const heading = eventBooking ? 'Complete Your Booking' : 'Payment';
   const amount = eventBooking ? bookingSubtotal() : membership ? transaction.membership.amount : transaction.donation.amount;
   const label = eventBooking ? EVENT_CONFIG.title : membership ? 'Golden Circle Membership' : 'General Contribution';
-  const serverState = eventBooking ? '' : transaction.checkout ? '<p class="server-state">A pending server record was created. The amount was resolved from the server-owned tier configuration.</p>' : '<p class="server-state warning">Server checkout is unavailable. This screen remains a UI demonstration and cannot activate membership.</p>';
+  const serverState = transaction.checkout ? '' : '<p class="server-state warning">Payment service is unavailable. Please try again later.</p>';
   if (eventBooking) {
     setView(`<p class="transaction-kicker">${label}</p><h2 class="transaction-heading" id="transaction-title" tabindex="-1">${heading}</h2><span class="demo-label">Demo Payment Flow</span><p class="transaction-lede">Demonstration total: <strong class="summary-amount">${formatINR(amount)}</strong>. Event payments are not enabled and no payment request will be made.</p>${PaymentStatus({ state: 'waiting', message: 'Use the developer controls to test the sample booking confirmation.' })}${DeveloperPaymentControls()}`);
     bindDeveloperControls(content);
     return;
   }
-  setView(`<p class="transaction-kicker">${label}</p><h2 class="transaction-heading" id="transaction-title" tabindex="-1">Pay by UPI</h2><span class="demo-label">Manual UPI · Verification not connected</span><p class="transaction-lede">Choose how you would like to open the payment experience. You will never be asked to type a UPI ID.</p>${serverState}${UPIPaymentOptions({ amount })}`);
+  setView(`<p class="transaction-kicker">${label}</p><h2 class="transaction-heading" id="transaction-title" tabindex="-1">Pay by UPI</h2><span class="demo-label">Manual UPI · Verification not connected</span><p class="transaction-lede">Continue with the UPI app on your phone.</p>${serverState}${UPIPaymentOptions({ amount })}`);
   content.querySelector('.upi-intent-trigger').addEventListener('click', event => attemptUPIIntent(event.currentTarget));
-  content.querySelector('.upi-qr-trigger').addEventListener('click', event => openQRCode(event.currentTarget));
+  if (!transaction.checkout) content.querySelectorAll('.upi-action').forEach(button => { button.disabled = true; });
   bindDeveloperControls(content);
 };
 
@@ -474,12 +415,14 @@ const renderDiscard = () => {
 
 const renderCurrent = () => {
   if (transaction.screen === 'discard') return renderDiscard();
+  if (transaction.screen === 'verified') return renderVerifiedSuccess();
+  if (transaction.screen === 'receipt') return renderReceiptForm();
   if (transaction.screen === 'success') return renderSuccess();
   if (transaction.screen === 'failure') return renderFailure();
   if (transaction.screen === 'acknowledgement') return renderAcknowledgement();
   if (transaction.screen === 'ticket') return renderTicket();
   if (transaction.step === 3) return renderPayment();
-  if (transaction.type !== 'event_booking') return [renderDonationContribution,renderDonationDetails,renderDonationReview][transaction.step]();
+  if (transaction.type !== 'event_booking') return renderDonationContribution();
   return [renderTicketSelection,renderBookingDetails,renderBookingReview][transaction.step]();
 };
 
@@ -488,20 +431,22 @@ const openTransaction = (nextTransaction, trigger) => {
   returnFocus = trigger;
   overlay.hidden = false;
   document.body.classList.add('modal-open');
-  renderCurrent();
+  if (transaction.screen === 'preparing') setView('<h2 class="transaction-heading" id="transaction-title" tabindex="-1">Preparing payment…</h2>');
+  else renderCurrent();
   dialog.focus({ preventScroll: true });
 };
 
 const closeTransaction = force => {
   if (!transaction) return;
-  if (!qrOverlay.hidden) closeQRCode(false);
-  if (!force && transaction.dirty && !['success','acknowledgement','ticket'].includes(transaction.screen)) {
+  if (!force && transaction.dirty && !['success','verified','receipt','acknowledgement','ticket'].includes(transaction.screen)) {
     if (transaction.screen === 'discard') return closeTransaction(true);
     transaction.previousScreen = transaction.screen;
     transaction.screen = 'discard';
     renderCurrent();
     return;
   }
+  window.clearTimeout(paymentCheckTimer);
+  window.clearTimeout(intentFallbackTimer);
   overlay.hidden = true;
   document.body.classList.remove('modal-open');
   content.innerHTML = '';
@@ -527,18 +472,12 @@ dialog.addEventListener('keydown', event => {
   if (event.key === 'Escape') { event.preventDefault(); requestClose(); return; }
   trapFocus(event, dialog);
 });
-qrDialog.addEventListener('keydown', event => {
-  if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); closeQRCode(true); return; }
-  trapFocus(event, qrDialog);
-});
 closeButton.addEventListener('click', requestClose);
 overlay.addEventListener('mousedown', event => { if (event.target === overlay) requestClose(); });
-qrCloseButton.addEventListener('click', () => closeQRCode(true));
-qrOverlay.addEventListener('mousedown', event => { if (event.target === qrOverlay) closeQRCode(true); });
 
 export function initTransactions() {
   const membershipGrid = document.querySelector('#membership-tiers');
-  membershipGrid.innerHTML = membershipData.tiers.map(tier => `<article class="tier ${tier.code === 'LEGACY_500000' ? 'tier-open legacy-tier' : ''}">${tier.badge ? `<span class="tier-badge">${escapeHTML(tier.badge)}</span>` : ''}<h2>${escapeHTML(tier.name)}</h2><p class="tier-amount">${formatINR(tier.amount)}</p><p class="tier-impact">Annual Golden Circle Membership</p><p class="benefits-label">Includes</p><ul class="tier-benefits">${tier.benefitLabels.map(benefit => `<li>${escapeHTML(benefit)}</li>`).join('')}</ul><button class="tier-btn membership-trigger" type="button" data-membership-tier="${tier.code}">DONATE</button></article>`).join('');
+  membershipGrid.innerHTML = membershipData.tiers.map(tier => `<article class="tier ${tier.code === 'LEGACY_500000' ? 'tier-open legacy-tier' : ''}">${tier.badge ? `<span class="tier-badge">${escapeHTML(tier.badge)}</span>` : ''}<h2>${escapeHTML(tier.name)}</h2><p class="tier-amount">${formatINR(tier.amount)}</p><p class="tier-impact">${escapeHTML(tier.description)}</p><ul class="tier-benefits">${tier.benefitLabels.map(benefit => `<li>${escapeHTML(benefit)}</li>`).join('')}</ul><button class="tier-btn membership-trigger" type="button" data-membership-tier="${tier.code}">${escapeHTML(tier.cta)}</button></article>`).join('');
   let selectedTier = '';
   document.querySelectorAll('.contribution-tier').forEach(trigger => trigger.addEventListener('click', () => {
     selectedTier = trigger.dataset.membershipTier;
@@ -549,7 +488,7 @@ export function initTransactions() {
     selectedTier = '';
     document.querySelectorAll('.contribution-tier').forEach(option => option.setAttribute('aria-pressed', 'false'));
   });
-  document.querySelectorAll('.membership-trigger').forEach(trigger => trigger.addEventListener('click', () => openTransaction(createMembership(trigger.dataset.membershipTier), trigger)));
+  document.querySelectorAll('.membership-trigger').forEach(trigger => trigger.addEventListener('click', () => startContribution(createMembership(trigger.dataset.membershipTier), trigger)));
   document.querySelector('.contribute-now-trigger').addEventListener('click', event => {
     const otherAmount = Number(document.querySelector('#other-contribution-amount').value || 0);
     const nextTransaction = selectedTier ? createMembership(selectedTier) : createDonation();
@@ -557,6 +496,71 @@ export function initTransactions() {
       nextTransaction.donation.otherAmount = String(otherAmount);
       nextTransaction.donation.amount = otherAmount;
     }
-    openTransaction(nextTransaction, event.currentTarget);
+    const amountInput = document.querySelector('#other-contribution-amount');
+    if (!amountInput.value || !amountInput.checkValidity()) { amountInput.reportValidity(); amountInput.focus(); return; }
+    startContribution(nextTransaction, event.currentTarget);
   });
 }
+
+
+const startContribution = (next, trigger) => {
+  next.screen = 'preparing';
+  openTransaction(next, trigger);
+  prepareCheckout(trigger);
+};
+let paymentCheckTimer = 0;
+const schedulePaymentCheck = () => {
+  window.clearTimeout(paymentCheckTimer);
+  if (!transaction?.checkout || transaction.screen !== 'flow') return;
+  paymentCheckTimer = window.setTimeout(checkPayment, 4000);
+};
+const checkPayment = async () => {
+  const current = transaction;
+  if (!current?.checkout) return;
+  try {
+    const response = await fetch(`/api/checkouts/${encodeURIComponent(current.checkout.checkoutId)}/status`, {
+      headers: { Authorization: `Bearer ${current.checkout.accessToken}` }, cache: 'no-store'
+    });
+    if (response.ok) {
+      const status = await response.json();
+      if (transaction !== current) return;
+      if (status.paymentStatus === 'verified') {
+        current.verifiedPayment = status;
+        current.screen = 'verified';
+        renderCurrent();
+        return;
+      }
+    }
+  } catch { /* Keep pending until the server can verify payment. */ }
+  if (transaction === current) schedulePaymentCheck();
+};
+const renderVerifiedSuccess = () => {
+  if (!transaction.verifiedPayment) return;
+  setView(`<div class="status-state"><div class="status-mark" aria-hidden="true">✓</div><h2 class="transaction-heading" id="transaction-title" tabindex="-1">Payment successful.</h2><p class="transaction-lede">Thank you for nurturing the arts.</p><p class="transaction-lede">Would you like an 80G receipt?</p>${buttons('Yes, I would like an 80G receipt','receipt','No, thank you','done')}</div>`);
+  content.querySelector('[data-action="done"]').onclick = () => closeTransaction(true);
+  content.querySelector('[data-action="receipt"]').onclick = () => { transaction.screen = 'receipt'; renderCurrent(); };
+};
+const renderReceiptForm = () => {
+  if (!transaction.verifiedPayment) return;
+  setView(`<h2 class="transaction-heading" id="transaction-title" tabindex="-1">80G receipt details</h2><p class="transaction-lede">Share your details for SVN's tax documentation process.</p><form id="receipt-form" class="form-grid">${contactField('name','Full name')}${contactField('email','Email','email')}${contactField('pan','PAN','text',true,'','pattern="[A-Za-z]{5}[0-9]{4}[A-Za-z]" maxlength="10"')}${contactField('address','Full address')}${contactField('city','City')}${contactField('postalCode','Postal code','text',true,'','autocomplete="postal-code"')}${contactField('country','Country')}<p class="form-error" role="alert"></p><button class="modal-button primary" type="submit">Submit receipt request</button></form>${buttons('Back','back')}`);
+  content.querySelector('[data-action="back"]').onclick = () => { transaction.screen = 'verified'; renderCurrent(); };
+  content.querySelector('#receipt-form').onsubmit = async event => {
+    event.preventDefault();
+    const current = transaction;
+    const form = event.currentTarget;
+    const button = form.querySelector('button');
+    button.disabled = true;
+    try {
+      const response = await fetch(`/api/checkouts/${encodeURIComponent(current.checkout.checkoutId)}/receipt-request`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${current.checkout.accessToken}` },
+        body: JSON.stringify(Object.fromEntries(new FormData(form)))
+      });
+      if (!response.ok) throw new Error('Unable to save');
+      if (transaction !== current) return;
+      setView(`<h2 class="transaction-heading" id="transaction-title" tabindex="-1">Receipt request received</h2><p class="transaction-lede">SVN will review your details and the eligible donation amount through its existing tax documentation process.</p>${buttons('Done','done')}`);
+      content.querySelector('[data-action="done"]').onclick = () => closeTransaction(true);
+    } catch {
+      if (transaction === current) form.querySelector('.form-error').textContent = 'Your request could not be saved. Please try again.';
+    } finally { button.disabled = false; }
+  };
+};
