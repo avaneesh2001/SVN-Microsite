@@ -20,16 +20,24 @@ export const ORGANISATION_SETTINGS = Object.freeze({
   tax_receipt_policy: { status: 'PENDING_CA_CONFIRMATION', eligibleAmountMode: 'NOT_AUTOMATICALLY_EQUAL_TO_PAYMENT', form10BD10BEAmountSource: 'CONFIRMED_ELIGIBLE_DONATION_AMOUNT' }
 });
 
-export const UPI_PAYMENT_CONFIG = Object.freeze({
-  mode: 'upi_intent',
-  vpa: '8588993989@ptyes',
-  payeeName: 'Sangeet Vidya Niketan',
-  transactionReferencePrefix: 'GC-TEST',
-  transactionNote: 'Contribution to Sangeet Vidya Niketan',
-  currency: 'INR',
-  showDeveloperControls: false,
-  desktopMessage: 'Please open this page on your phone to pay by UPI.'
-});
+const getRuntimeUpiConfig = () => {
+  const environment = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env : {};
+  const globalConfig = typeof window !== 'undefined' && window.__SVN_UPI__ ? window.__SVN_UPI__ : {};
+  const vpa = String(globalConfig.vpa ?? environment.VITE_UPI_VPA ?? '').trim();
+  const payeeName = String(globalConfig.payeeName ?? environment.VITE_UPI_PAYEE_NAME ?? '').trim();
+  return {
+    mode: 'upi_intent',
+    vpa,
+    payeeName,
+    transactionReferencePrefix: 'GC-TEST',
+    transactionNote: 'Contribution to Sangeet Vidya Niketan',
+    currency: 'INR',
+    showDeveloperControls: false,
+    desktopMessage: 'UPI payment is available on your mobile device.'
+  };
+};
+
+export const UPI_PAYMENT_CONFIG = Object.freeze(getRuntimeUpiConfig());
 
 const overlay = document.querySelector('#transaction-overlay');
 const dialog = overlay.querySelector('.transaction-dialog');
@@ -48,20 +56,24 @@ const ticketTotal = () => EVENT_CONFIG.tickets.reduce((sum, ticket) => sum + tra
 const bookingSubtotal = () => EVENT_CONFIG.tickets.reduce((sum, ticket) => sum + ticket.price * transaction.booking.quantities[ticket.id], 0);
 const selectedTickets = () => EVENT_CONFIG.tickets.filter(ticket => transaction.booking.quantities[ticket.id] > 0);
 
-export function createUPIIntent({ vpa, payeeName, transactionReference, amount, note, currency = 'INR' }) {
+export function buildUpiUrl({ vpa, payeeName, amount, transactionReference, note, currency = 'INR' }) {
   const numericAmount = Number(amount);
   if (!vpa || !payeeName || !transactionReference || !Number.isFinite(numericAmount) || numericAmount <= 0) {
     throw new Error('A VPA, payee, transaction reference, and positive amount are required.');
   }
-  const parameters = new URLSearchParams({
-    pa: vpa,
-    pn: payeeName,
-    tr: transactionReference,
+  const params = new URLSearchParams({
+    pa: String(vpa).trim(),
+    pn: String(payeeName).trim(),
+    tr: String(transactionReference).trim(),
     am: numericAmount.toFixed(2),
-    cu: currency,
-    tn: note
+    cu: String(currency || 'INR').trim(),
+    tn: String(note || '').trim()
   });
-  return `upi://pay?${parameters.toString()}`;
+  return `upi://pay?${params.toString()}`;
+}
+
+export function createUPIIntent({ vpa, payeeName, transactionReference, amount, note, currency = 'INR' }) {
+  return buildUpiUrl({ vpa, payeeName, amount, transactionReference, note, currency });
 }
 
 export const PaymentStatus = ({ state = 'waiting', message = '' } = {}) => {
@@ -293,35 +305,38 @@ const bindDeveloperControls = root => {
   }));
 };
 
-const attemptUPIIntent = trigger => {
+const attemptUPIIntent = event => {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
   const amount = currentPaymentAmount();
+  const configuredVpa = UPI_PAYMENT_CONFIG.vpa;
+  const configuredPayee = UPI_PAYMENT_CONFIG.payeeName;
+
+  if (!configuredVpa) {
+    updatePaymentStatus('failed', 'UPI payment is not configured in this environment. Add VITE_UPI_VPA before enabling live payments.');
+    return;
+  }
+
   const upiUrl = createUPIIntent({
-    vpa: UPI_PAYMENT_CONFIG.vpa,
-    payeeName: UPI_PAYMENT_CONFIG.payeeName,
+    vpa: configuredVpa,
+    payeeName: configuredPayee,
     transactionReference: currentUPIReference(),
     amount,
     note: UPI_PAYMENT_CONFIG.transactionNote,
     currency: UPI_PAYMENT_CONFIG.currency
   });
-  let appOpened = false;
-  const noteAppSwitch = () => { if (document.hidden) appOpened = true; };
-  document.addEventListener('visibilitychange', noteAppSwitch, { once: true });
-  updatePaymentStatus('waiting', 'Attempting to open a UPI app. This website cannot yet confirm the payment automatically.');
 
-  const intentLink = document.createElement('a');
-  intentLink.href = upiUrl;
-  intentLink.hidden = true;
-  intentLink.setAttribute('aria-hidden', 'true');
-  document.body.append(intentLink);
-  intentLink.click();
-  intentLink.remove();
+  updatePaymentStatus('waiting', 'Opening your UPI app…');
 
-  window.clearTimeout(intentFallbackTimer);
-  intentFallbackTimer = window.setTimeout(() => {
-    document.removeEventListener('visibilitychange', noteAppSwitch);
-    if (!transaction || transaction.step !== 3 || appOpened) return;
-    updatePaymentStatus('waiting', 'If no UPI app opened, please visit this page on a phone with a UPI app installed and tap PAY BY UPI.');
-  }, 1400);
+  const target = window.open('', '_self');
+  if (target) {
+    target.location.href = upiUrl;
+    return;
+  }
+  window.location.href = upiUrl;
 };
 
 const renderPayment = () => {
@@ -337,11 +352,14 @@ const renderPayment = () => {
     return;
   }
   if (!isMobileUPIEnabled()) {
-    setView(`<p class="transaction-kicker">${label}</p><h2 class="transaction-heading" id="transaction-title" tabindex="-1">Pay by UPI</h2><p class="transaction-lede">${escapeHTML(UPI_PAYMENT_CONFIG.desktopMessage)}</p>${serverState}`);
+    const desktopWarning = !UPI_PAYMENT_CONFIG.vpa
+      ? 'UPI payment is not configured in this environment. Add VITE_UPI_VPA and VITE_UPI_PAYEE_NAME to enable live mobile payments.'
+      : UPI_PAYMENT_CONFIG.desktopMessage;
+    setView(`<p class="transaction-kicker">${label}</p><h2 class="transaction-heading" id="transaction-title" tabindex="-1">Pay by UPI</h2><p class="transaction-lede">${escapeHTML(desktopWarning)}</p>${serverState}`);
     return;
   }
   setView(`<p class="transaction-kicker">${label}</p><h2 class="transaction-heading" id="transaction-title" tabindex="-1">Pay by UPI</h2><p class="transaction-lede">Open your installed UPI app and complete the payment securely.</p>${serverState}${UPIPaymentOptions({ amount })}`);
-  content.querySelector('.upi-intent-trigger').addEventListener('click', event => attemptUPIIntent(event.currentTarget));
+  content.querySelector('.upi-intent-trigger').addEventListener('click', event => attemptUPIIntent(event));
   if (!transaction.checkout) content.querySelectorAll('.upi-action').forEach(button => { button.disabled = true; });
   bindDeveloperControls(content);
 };

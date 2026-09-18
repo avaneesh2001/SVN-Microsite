@@ -6,8 +6,9 @@ const path = require('node:path');
 const transactionSource = fs.readFileSync(path.join(__dirname, '..', 'transactions.js'), 'utf8');
 assert.match(transactionSource, /upi:\/\/pay\?/i, 'UPI intent URI must be generated for mobile payments');
 assert.match(transactionSource, /PAY BY UPI/i, 'Payment UI should use the simple PAY BY UPI action');
-assert.match(transactionSource, /Please open this page on your phone to pay by UPI\./i, 'Desktop must show a graceful non-QR message');
+assert.match(transactionSource, /UPI payment is available on your mobile device\./i, 'Desktop must show a graceful mobile-only message');
 assert.doesNotMatch(transactionSource, /Show QR|manual UPI ID|Enter UPI ID|qr code/i, 'The QR/manual UPI entry flow should stay removed');
+assert.doesNotMatch(transactionSource, /8588993989@ptyes|vpa:\s*'8588993989@ptyes'/i, 'Production VPA must not be hard-coded into the frontend');
 
 process.env.SVN_DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'svn-payment-test-'));
 const { app, initialise, database, finalizeVerifiedPayment } = require('../server/index.cjs');
