@@ -5,7 +5,7 @@ export const UPI_PAYMENT_CONFIG = Object.freeze({
   payeeName: 'Sangeet Vidya Niketan',
   mobile: '+91 85957 93989',
   currency: 'INR',
-  transactionNote: 'Contribution to Sangeet Vidya Niketan',
+  transactionNote: '',
   fallbackMessage: 'Open Google Pay, PhonePe, BHIM or any UPI app and transfer directly.'
 });
 
@@ -28,13 +28,7 @@ const clampAmount = value => {
   return Number.isFinite(numericValue) ? numericValue : NaN;
 };
 
-export function generatePaymentReference() {
-  const timeStamp = Date.now();
-  const salt = Math.random().toString(36).slice(2, 8).toUpperCase();
-  return `SVN-${timeStamp}-${salt}`;
-}
-
-export function buildUpiUrl(amount, reference = generatePaymentReference()) {
+export function createUpiUrl(amount) {
   const numericAmount = clampAmount(amount);
   if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
     throw new Error('A valid contribution amount is required.');
@@ -43,13 +37,15 @@ export function buildUpiUrl(amount, reference = generatePaymentReference()) {
   const params = new URLSearchParams({
     pa: String(UPI_PAYMENT_CONFIG.vpa).trim(),
     pn: String(UPI_PAYMENT_CONFIG.payeeName).trim(),
-    am: numericAmount.toFixed(2),
-    cu: String(UPI_PAYMENT_CONFIG.currency || 'INR').trim(),
-    tr: String(reference || generatePaymentReference()).trim(),
-    tn: String(UPI_PAYMENT_CONFIG.transactionNote || 'Contribution to Sangeet Vidya Niketan').trim()
+    am: Number(numericAmount).toFixed(2),
+    cu: String(UPI_PAYMENT_CONFIG.currency || 'INR').trim()
   });
 
   return `upi://pay?${params.toString()}`;
+}
+
+export function buildUpiUrl(amount) {
+  return createUpiUrl(amount);
 }
 
 export function revealUpiFallback() {
@@ -76,26 +72,12 @@ export function payByUpi(amount, trigger = null) {
   const numericAmount = clampAmount(amount);
   if (!Number.isFinite(numericAmount) || numericAmount <= 0) return;
 
-  const reference = generatePaymentReference();
-  const upiUrl = buildUpiUrl(numericAmount, reference);
+  const upiUrl = createUpiUrl(numericAmount);
 
   if (trigger) {
     trigger.dataset.upiUrl = upiUrl;
     trigger.setAttribute('data-upi-url', upiUrl);
   }
-
-  const fallbackTimer = window.setTimeout(() => {
-    revealUpiFallback();
-  }, 1400);
-
-  const clearFallbackTimer = () => {
-    window.clearTimeout(fallbackTimer);
-  };
-
-  window.addEventListener('pagehide', clearFallbackTimer, { once: true });
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') clearFallbackTimer();
-  }, { once: true });
 
   if (typeof window !== 'undefined') {
     window.location.href = upiUrl;

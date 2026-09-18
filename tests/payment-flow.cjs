@@ -5,11 +5,14 @@ const path = require('node:path');
 
 const transactionSource = fs.readFileSync(path.join(__dirname, '..', 'transactions.js'), 'utf8');
 assert.match(transactionSource, /upi:\/\/pay\?/i, 'UPI intent URI must be generated for mobile payments');
-assert.match(transactionSource, /buildUpiUrl\(|payByUpi\(|tr=|unique.*reference|window\.location\.href = buildUpiUrl\(|window\.location\.href = payByUpi\(/i, 'Direct UPI launch and unique transaction reference must be present');
+assert.match(transactionSource, /createUpiUrl\(|payByUpi\(|window\.location\.href\s*=\s*createUpiUrl\(|window\.location\.href\s*=\s*payByUpi\(/i, 'Direct UPI launch must happen immediately from the click handler');
 assert.match(transactionSource, /sangeetvidyaniketan@ptyes/i, 'The SVN VPA must be set for the direct UPI launcher');
-assert.match(transactionSource, /Pay directly by UPI|Open Google Pay, PhonePe, BHIM|\+91 85957 93989/i, 'Fallback payment instructions must mirror the working donor guidance');
-assert.doesNotMatch(transactionSource, /transaction-overlay|Pay by UPI|PAY BY UPI|Open your installed UPI app|payment-status-region|Waiting for payment|modal-button|Review Contribution|donor information form/i, 'The intermediate payment modal and pre-payment flow must be removed');
-assert.doesNotMatch(transactionSource, /preventDefault\(\)\s*;\s*stopPropagation\(\)\s*;\s*window\.location\.href = buildUpiUrl\(/i, 'Direct launch should remain immediate and not blocked by another click intercept');
+assert.doesNotMatch(transactionSource, /8588993989@ptyes|8588993989|tr=|tid=|mc=|url=|tn=|transaction reference|invoice/i, 'The stale VPA and extra merchant metadata must be removed from the first direct UPI test');
+assert.match(transactionSource, /pa:\s*['\"]sangeetvidyaniketan@ptyes['\"]|pa:\s*String\(UPI_PAYMENT_CONFIG\.vpa\)/i, 'The direct UPI URI must use the corrected VPA');
+assert.match(transactionSource, /pn:\s*['\"]Sangeet Vidya Niketan['\"]|pn:\s*String\(UPI_PAYMENT_CONFIG\.payeeName\)/i, 'The direct UPI URI must use the corrected payee name');
+assert.match(transactionSource, /am:\s*Number\(amount\)\.toFixed\(2\)|am:\s*numericAmount\.toFixed\(2\)/i, 'The direct UPI URI must use a fixed 2-decimal amount');
+assert.match(transactionSource, /cu:\s*['\"]INR['\"]|cu:\s*String\(UPI_PAYMENT_CONFIG\.currency\s*\|\|\s*'INR'\)/i, 'The direct UPI URI must set INR as the currency');
+assert.doesNotMatch(transactionSource, /transaction-overlay|Pay by UPI|PAY BY UPI|Open your installed UPI app|payment-status-region|Waiting for payment|Review Contribution|donor information form|modal-button/i, 'The intermediate payment modal and pre-payment flow must be removed');
 
 process.env.SVN_DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'svn-payment-test-'));
 const { app, initialise, database, finalizeVerifiedPayment } = require('../server/index.cjs');
