@@ -24,11 +24,11 @@ const getRuntimeUpiConfig = () => {
   const environment = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env : {};
   const globalConfig = typeof window !== 'undefined' && window.__SVN_UPI__ ? window.__SVN_UPI__ : {};
   const vpa = String(globalConfig.vpa ?? environment.VITE_UPI_VPA ?? '').trim();
-  const payeeName = String(globalConfig.payeeName ?? environment.VITE_UPI_PAYEE_NAME ?? '').trim();
+  const payeeName = String(globalConfig.payeeName ?? environment.VITE_UPI_PAYEE_NAME ?? 'Sangeet Vidya Niketan').trim();
   return {
     mode: 'upi_intent',
     vpa,
-    payeeName,
+    payeeName: payeeName || 'Sangeet Vidya Niketan',
     transactionReferencePrefix: 'GC-TEST',
     transactionNote: 'Contribution to Sangeet Vidya Niketan',
     currency: 'INR',
@@ -36,6 +36,12 @@ const getRuntimeUpiConfig = () => {
     desktopMessage: 'UPI payment is available on your mobile device.'
   };
 };
+
+export const SVN_UPI_CONFIG = Object.freeze({
+  vpa: '',
+  payeeName: 'Sangeet Vidya Niketan',
+  note: 'Contribution to Sangeet Vidya Niketan'
+});
 
 export const UPI_PAYMENT_CONFIG = Object.freeze(getRuntimeUpiConfig());
 
@@ -56,15 +62,14 @@ const ticketTotal = () => EVENT_CONFIG.tickets.reduce((sum, ticket) => sum + tra
 const bookingSubtotal = () => EVENT_CONFIG.tickets.reduce((sum, ticket) => sum + ticket.price * transaction.booking.quantities[ticket.id], 0);
 const selectedTickets = () => EVENT_CONFIG.tickets.filter(ticket => transaction.booking.quantities[ticket.id] > 0);
 
-export function buildUpiUrl({ vpa, payeeName, amount, transactionReference, note, currency = 'INR' }) {
+export function buildUpiUrl({ vpa, payeeName, amount, note, currency = 'INR' }) {
   const numericAmount = Number(amount);
-  if (!vpa || !payeeName || !transactionReference || !Number.isFinite(numericAmount) || numericAmount <= 0) {
-    throw new Error('A VPA, payee, transaction reference, and positive amount are required.');
+  if (!vpa || !payeeName || !Number.isFinite(numericAmount) || numericAmount <= 0) {
+    throw new Error('A VPA, payee, and positive amount are required.');
   }
   const params = new URLSearchParams({
     pa: String(vpa).trim(),
     pn: String(payeeName).trim(),
-    tr: String(transactionReference).trim(),
     am: numericAmount.toFixed(2),
     cu: String(currency || 'INR').trim(),
     tn: String(note || '').trim()
@@ -72,8 +77,8 @@ export function buildUpiUrl({ vpa, payeeName, amount, transactionReference, note
   return `upi://pay?${params.toString()}`;
 }
 
-export function createUPIIntent({ vpa, payeeName, transactionReference, amount, note, currency = 'INR' }) {
-  return buildUpiUrl({ vpa, payeeName, amount, transactionReference, note, currency });
+export function createUPIIntent({ vpa, payeeName, amount, note, currency = 'INR' }) {
+  return buildUpiUrl({ vpa, payeeName, amount, note, currency });
 }
 
 export const PaymentStatus = ({ state = 'waiting', message = '' } = {}) => {
@@ -311,32 +316,31 @@ const attemptUPIIntent = event => {
     event.stopPropagation();
   }
 
-  const amount = currentPaymentAmount();
-  const configuredVpa = UPI_PAYMENT_CONFIG.vpa;
-  const configuredPayee = UPI_PAYMENT_CONFIG.payeeName;
+  const amount = Number(currentPaymentAmount() || 0);
+  const configuredVpa = (UPI_PAYMENT_CONFIG.vpa || SVN_UPI_CONFIG.vpa || '').trim();
+  const configuredPayee = (UPI_PAYMENT_CONFIG.payeeName || SVN_UPI_CONFIG.payeeName || 'Sangeet Vidya Niketan').trim();
 
   if (!configuredVpa) {
-    updatePaymentStatus('failed', 'UPI payment is not configured in this environment. Add VITE_UPI_VPA before enabling live payments.');
+    updatePaymentStatus('failed', 'UPI VPA is required in the browser configuration before live Android payments can launch.');
+    return;
+  }
+
+  if (!Number.isFinite(amount) || amount <= 0) {
+    updatePaymentStatus('failed', 'Select a valid contribution amount before paying by UPI.');
     return;
   }
 
   const upiUrl = createUPIIntent({
     vpa: configuredVpa,
     payeeName: configuredPayee,
-    transactionReference: currentUPIReference(),
     amount,
-    note: UPI_PAYMENT_CONFIG.transactionNote,
+    note: SVN_UPI_CONFIG.note || UPI_PAYMENT_CONFIG.transactionNote,
     currency: UPI_PAYMENT_CONFIG.currency
   });
 
-  updatePaymentStatus('waiting', 'Opening your UPI app…');
-
-  const target = window.open('', '_self');
-  if (target) {
-    target.location.href = upiUrl;
-    return;
+  if (typeof window !== 'undefined') {
+    window.location.href = upiUrl;
   }
-  window.location.href = upiUrl;
 };
 
 const renderPayment = () => {
@@ -345,22 +349,23 @@ const renderPayment = () => {
   const heading = eventBooking ? 'Complete Your Booking' : 'Payment';
   const amount = eventBooking ? bookingSubtotal() : membership ? transaction.membership.amount : transaction.donation.amount;
   const label = eventBooking ? EVENT_CONFIG.title : membership ? 'Golden Circle Membership' : 'General Contribution';
-  const serverState = transaction.checkout ? '' : '<p class="server-state warning">Payment service is unavailable. Please try again later.</p>';
+  const serverState = !UPI_PAYMENT_CONFIG.vpa && !SVN_UPI_CONFIG.vpa
+    ? '<p class="server-state warning">UPI VPA is required in the browser configuration before live Android payments can launch.</p>'
+    : '';
   if (eventBooking) {
     setView(`<p class="transaction-kicker">${label}</p><h2 class="transaction-heading" id="transaction-title" tabindex="-1">${heading}</h2><span class="demo-label">Demo Payment Flow</span><p class="transaction-lede">Demonstration total: <strong class="summary-amount">${formatINR(amount)}</strong>. Event payments are not enabled and no payment request will be made.</p>${PaymentStatus({ state: 'waiting', message: 'Use the developer controls to test the sample booking confirmation.' })}${DeveloperPaymentControls()}`);
     bindDeveloperControls(content);
     return;
   }
   if (!isMobileUPIEnabled()) {
-    const desktopWarning = !UPI_PAYMENT_CONFIG.vpa
-      ? 'UPI payment is not configured in this environment. Add VITE_UPI_VPA and VITE_UPI_PAYEE_NAME to enable live mobile payments.'
+    const desktopWarning = !UPI_PAYMENT_CONFIG.vpa && !SVN_UPI_CONFIG.vpa
+      ? 'UPI VPA is required in the browser configuration before live Android payments can launch.'
       : UPI_PAYMENT_CONFIG.desktopMessage;
     setView(`<p class="transaction-kicker">${label}</p><h2 class="transaction-heading" id="transaction-title" tabindex="-1">Pay by UPI</h2><p class="transaction-lede">${escapeHTML(desktopWarning)}</p>${serverState}`);
     return;
   }
   setView(`<p class="transaction-kicker">${label}</p><h2 class="transaction-heading" id="transaction-title" tabindex="-1">Pay by UPI</h2><p class="transaction-lede">Open your installed UPI app and complete the payment securely.</p>${serverState}${UPIPaymentOptions({ amount })}`);
   content.querySelector('.upi-intent-trigger').addEventListener('click', event => attemptUPIIntent(event));
-  if (!transaction.checkout) content.querySelectorAll('.upi-action').forEach(button => { button.disabled = true; });
   bindDeveloperControls(content);
 };
 
@@ -531,9 +536,9 @@ export function initTransactions() {
 
 
 const startContribution = (next, trigger) => {
-  next.screen = 'preparing';
+  next.screen = 'flow';
+  next.step = 3;
   openTransaction(next, trigger);
-  prepareCheckout(trigger);
 };
 let paymentCheckTimer = 0;
 const schedulePaymentCheck = () => {
