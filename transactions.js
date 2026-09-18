@@ -1,13 +1,13 @@
 import membershipData from './membership-tiers.json';
 
 export const UPI_PAYMENT_CONFIG = Object.freeze({
-  vpa: 'sangeetvidyaniketan@ptyes',
+  vpa: '8588993989@ptyes',
   payeeName: 'Sangeet Vidya Niketan',
-  mobile: '+91 85957 93989',
-  currency: 'INR',
-  instruction: 'Open Google Pay, PhonePe, BHIM or any UPI app and pay directly to this UPI ID.',
-  fallbackMessage: 'Having trouble paying?'
+  currency: 'INR'
 });
+
+// Enable only when explicitly testing a ₹1 payment on a real Android phone.
+export const P2P_TEST_MODE = false;
 
 const formatINR = amount => new Intl.NumberFormat('en-IN', {
   style: 'currency',
@@ -28,61 +28,27 @@ const clampAmount = value => {
   return Number.isFinite(numericValue) ? numericValue : NaN;
 };
 
-export function createUpiUrl(amount) {
+export function createP2PUpiUrl(amount) {
   const numericAmount = clampAmount(amount);
   if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
     throw new Error('A valid contribution amount is required.');
   }
 
   const params = new URLSearchParams({
-    pa: 'sangeetvidyaniketan@ptyes',
-    pn: 'Sangeet Vidya Niketan',
+    pa: UPI_PAYMENT_CONFIG.vpa,
+    pn: UPI_PAYMENT_CONFIG.payeeName,
     am: Number(numericAmount).toFixed(2),
-    cu: 'INR'
+    cu: UPI_PAYMENT_CONFIG.currency
   });
 
-  return `upi://pay?${params.toString()}`;
-}
-
-export function revealUpiFallback(amount = null) {
-  const panel = document.querySelector('#upi-fallback-panel');
-  if (!panel) return;
-
-  panel.hidden = false;
-  panel.classList.add('is-visible');
-
-  const displayAmount = panel.querySelector('[data-upi-amount]');
-  if (displayAmount) {
-    const numericAmount = clampAmount(amount ?? displayAmount.dataset.amount ?? 0);
-    displayAmount.textContent = Number.isFinite(numericAmount) ? `₹${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(numericAmount)}` : '₹0';
-    displayAmount.dataset.amount = String(numericAmount);
-  }
-
-  const payee = panel.querySelector('[data-upi-payee]');
-  if (payee) payee.textContent = UPI_PAYMENT_CONFIG.payeeName;
-
-  const vpa = panel.querySelector('[data-upi-vpa]');
-  if (vpa) vpa.textContent = UPI_PAYMENT_CONFIG.vpa;
-
-  const copyButton = panel.querySelector('[data-copy-upi-id]');
-  if (copyButton) {
-    copyButton.onclick = async () => {
-      try {
-        await navigator.clipboard.writeText(UPI_PAYMENT_CONFIG.vpa);
-        copyButton.textContent = 'UPI ID copied';
-        setTimeout(() => { copyButton.textContent = 'Copy UPI ID'; }, 1800);
-      } catch {
-        copyButton.textContent = 'Copy UPI ID';
-      }
-    };
-  }
+  return `upi://pay?${params.toString().replace(/\+/g, '%20')}`;
 }
 
 export function payByUpi(amount, trigger = null) {
   const numericAmount = clampAmount(amount);
   if (!Number.isFinite(numericAmount) || numericAmount <= 0) return;
 
-  const upiUrl = createUpiUrl(numericAmount);
+  const upiUrl = createP2PUpiUrl(P2P_TEST_MODE ? 1 : numericAmount);
 
   if (trigger) {
     trigger.dataset.upiUrl = upiUrl;
@@ -95,6 +61,9 @@ export function payByUpi(amount, trigger = null) {
 }
 
 export function initTransactions() {
+  const testNotice = document.querySelector('#upi-test-notice');
+  if (testNotice) testNotice.hidden = !P2P_TEST_MODE;
+
   const membershipGrid = document.querySelector('#membership-tiers');
 
   if (membershipGrid) {
@@ -110,12 +79,12 @@ export function initTransactions() {
     `).join('');
 
     membershipGrid.querySelectorAll('.membership-trigger').forEach(trigger => {
-      trigger.addEventListener('click', () => {
+      trigger.onclick = () => {
         const selectedTier = membershipData.tiers.find(tier => tier.code === trigger.dataset.membershipTier);
         if (!selectedTier) return;
 
         payByUpi(selectedTier.amount, trigger);
-      });
+      };
     });
   }
 
@@ -123,7 +92,7 @@ export function initTransactions() {
   const sponsorButton = document.querySelector('.contribute-now-trigger');
 
   if (customAmountInput && sponsorButton) {
-    sponsorButton.addEventListener('click', () => {
+    sponsorButton.onclick = () => {
       const customAmount = Number(customAmountInput.value || 0);
       if (!Number.isFinite(customAmount) || customAmount <= 0) {
         customAmountInput.reportValidity();
@@ -132,6 +101,6 @@ export function initTransactions() {
       }
 
       payByUpi(customAmount, sponsorButton);
-    });
+    };
   }
 }

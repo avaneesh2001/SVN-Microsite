@@ -102,6 +102,7 @@
       <div class="short-sep" aria-hidden="true"></div>
       <div class="section-label reveal" id="contribute-title">An Invitation to Patronage</div>
       <p class="contribution-intro reveal">We are opening doors to the people who will shape India's cultural landscape for the next 100 years.</p>
+      <p id="upi-test-notice" hidden>UPI testing: contribution buttons currently open a ₹1 payment. Full contribution amounts are temporarily disabled.</p>
       <div class="contribution-options reveal">
         <div class="contribution-option-group">
           <p class="option-heading">Golden Circle Membership</p>
@@ -109,23 +110,12 @@
         </div>
         <div class="other-contribution">
           <label for="other-contribution-amount">Sponsor a Student</label>
-          <div class="other-amount-input"><span aria-hidden="true">₹</span><input id="other-contribution-amount" required type="number" inputmode="numeric" min="100" step="1" placeholder="Enter amount"></div>
+          <div class="other-amount-input"><span aria-hidden="true">₹</span><input id="other-contribution-amount" required type="number" inputmode="numeric" min="1" step="1" placeholder="Enter amount"></div>
           <p>Make a semester of support possible.</p>
         </div>
         <button class="primary-action contribute-now-trigger" type="button">SPONSOR A STUDENT</button>
       </div>
 
-      <div class="upi-fallback-panel" id="upi-fallback-panel" hidden>
-        <p class="upi-fallback-kicker">Having trouble paying?</p>
-        <p class="upi-fallback-amount" data-upi-amount>₹0</p>
-        <p class="upi-fallback-payee" data-upi-payee>Sangeet Vidya Niketan</p>
-        <p class="upi-fallback-label">UPI ID</p>
-        <div class="upi-fallback-row">
-          <code data-upi-vpa>sangeetvidyaniketan@ptyes</code>
-          <button type="button" class="copy-upi-id" data-copy-upi-id>Copy UPI ID</button>
-        </div>
-        <p class="upi-fallback-note">Open Google Pay, PhonePe, BHIM or any UPI app and pay directly to this UPI ID.</p>
-      </div>
     </section>
 
     <section class="section compact-section" id="advisory" data-section aria-labelledby="council-title">

@@ -1,55 +1,31 @@
-# Payment integration boundary
+# Direct P2P UPI payment
 
-The browser can hand a `upi://pay` URI for the configured Sangeet Vidya Niketan account to an installed UPI app. The contribution interface exposes only PAY BY UPI; there is no QR panel or QR fallback. The website does not verify payments, activate database memberships, or issue official receipts.
+Contribution buttons synchronously assign a generic P2P `upi://pay` intent to `window.location.href`. The recipient is `8588993989@ptyes`, with payee label `Sangeet Vidya Niketan`. Only `pa`, `pn`, `am`, and `cu` are included. There is no merchant classification, MCC, transaction reference, merchant URL, Google Pay PaymentRequest, or onboarding data.
 
-## Frontend UPI adapter
+`transactions.js` contains `createP2PUpiUrl`, `payByUpi`, and the button handlers in `initTransactions`. Initialization replaces each button's click handler, so repeated initialization does not stack handlers. The launch requires no network request, donor information, modal, review, QR screen, or second payment button.
 
-`UPI_PAYMENT_CONFIG` in [`transactions.js`](./transactions.js) is the source for the configured VPA, payee, note, currency, and reference prefix. It uses `sangeetvidyaniketan@ptyes` for `Sangeet Vidya Niketan`. This enables manual UPI app handoff but does not provide payment verification.
+## Pending real Android test
 
-The payment interface is separated into `UPIPaymentOptions`, `UPIIntentButton`, `PaymentStatus`, and `PaymentSuccess`. `createUPIIntent()` generates the UPI URI from configurable values. Selection opens payment directly without a contribution information, donor details or review screen.
+`P2P_TEST_MODE` is currently `false`: contribution clicks use the selected tier amount or entered custom amount. Set it to `true` only for an explicit ₹1 device test; a visible notice then indicates the override. Tier values remain intact in `membership-tiers.json`.
 
-Developer simulation controls are disabled in the public interface. The retained demo adapter can simulate success or failure for development only. A simulated success is marked `demo_confirmed`; it must never be interpreted as a gateway confirmation.
+Exact test URI:
 
-## Server-authoritative checkout
-
-Run the production-style server with:
-
-```bash
-npm start
+```text
+upi://pay?pa=8588993989%40ptyes&pn=Sangeet%20Vidya%20Niketan&am=1.00&cu=INR
 ```
 
-Membership checkout accepts only `membershipTier`. The server resolves the amount from [`membership-tiers.json`](./membership-tiers.json), so a browser-supplied or modified amount is ignored. General contributions use a separate endpoint and never create membership records.
+Open the site in Chrome on a real Android phone with UPI apps installed, tap CONTRIBUTE, and check the app chooser or configured default UPI app, recipient and ₹1 amount. The account name displayed by the app depends on the receiving account; the `pn` label cannot establish its identity. Complete the payment only after checking the recipient. This device/payment test has not been performed here.
 
-- `GET /api/membership-tiers`
-- `POST /api/checkouts/membership`
-- `POST /api/checkouts/contribution`
-- `GET /api/organisation-settings/tax-receipt-policy`
+After the ₹1 test succeeds, set `P2P_TEST_MODE = false` in `transactions.js` and rebuild. Buttons then launch the actual selected tier or custom amount, and the test notice is hidden.
 
-Checkout creates pending donor, donation, and—where applicable—membership records. It does not claim payment success.
+## Payment status boundary
 
-## Adding a gateway
+The static website cannot verify completion of a P2P payment. Opening the app or returning to the page never displays automatic payment success, activates membership, or issues a receipt.
 
-Select a provider such as Razorpay (or another UPI-capable gateway) and configure its credentials only on the server. Keep the existing frontend component boundary and replace the demo adapter with a provider adapter that must:
+The retained Express checkout/status/receipt endpoints are independent backend functionality and are not called by this direct P2P launch. Their pending records require independently verified payment before any finalization; a P2P app handoff provides no such verification.
 
-1. Create an order using the amount returned by the server-owned membership configuration.
-2. Send the gateway order identifier to the browser.
-3. Verify the provider webhook signature on the server.
-4. Match the webhook amount, currency, and order to the pending donation.
-5. Call `finalizeVerifiedPayment({ donationId, gatewayPaymentId })` only after those checks pass.
+## Checks
 
-The finalizer marks payment verified, assigns the ordinary receipt number, and activates membership with its start and expiry dates. Never call it from a browser request that merely claims success.
-
-## Tax receipts
-
-`eligible_80g_amount` intentionally remains `NULL`. The `tax_receipt_policy` setting is `PENDING_CA_CONFIRMATION`, and Form 10BD/10BE data must use a separately confirmed eligible amount. An ordinary payment receipt must not be described as an official 80G receipt.
-
-## Frictionless checkout and optional receipt request
-
-Membership and contribution checkout require no contact or tax details. Anonymous donor records have empty contact values to preserve the existing relational schema. The server returns a random checkout access token; only its SHA-256 hash is stored. Keep the token in the active checkout session and send it as a Bearer authorization header.
-
-- `GET /api/checkouts/:id/status` returns server-owned payment status.
-- `POST /api/checkouts/:id/receipt-request` accepts name, email, PAN, address, city, postalCode and country only after verified payment and explicit donor opt-in.
-
-The frontend polls status, then displays “Payment successful.” and offers an optional 80G request. Requests are stored for review in `tax_receipt_requests`; they do not issue Form 10BE or change `eligible_80g_amount`. Existing 10BD/10BE policy boundaries remain in place. The provider adapter and statutory export/issuance implementation are not present in this repository.
-
-Live verification still requires the gateway adapter described above. Manual UPI handoff is preserved; the separate QR option, panel and automatic QR fallback have been removed. Browser return, app switch and demo controls never unlock the verified receipt flow. Static-only hosting cannot serve these API routes; use the Express server with persistent storage.
+- `node tests/p2p-upi.cjs`: exact URI, allowed fields, synchronous navigation, repeated initialization, test and actual amounts, invalid input.
+- `node tests/payment-flow.cjs`: includes P2P checks and existing backend authorization/receipt tests.
+- `npm run build`: production bundle.

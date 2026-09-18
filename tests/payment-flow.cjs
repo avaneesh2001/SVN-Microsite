@@ -3,13 +3,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 
-const transactionSource = fs.readFileSync(path.join(__dirname, '..', 'transactions.js'), 'utf8');
-assert.doesNotMatch(transactionSource, /upi:\/\/pay\?/i, 'The broken merchant UPI intent must be removed until the MCC and gateway are configured');
-assert.match(transactionSource, /revealUpiFallback\(|payByUpi\(|sangeetvidyaniketan@ptyes|Open Google Pay, PhonePe, BHIM or any UPI app and pay to the UPI ID above/i, 'The manual UPI fallback must be active');
-assert.doesNotMatch(transactionSource, /8588993989@ptyes|8588993989/i, 'The stale VPA must never be in the project again');
-assert.doesNotMatch(transactionSource, /merchantCategoryCode|returnUrl|PaymentRequest|https:\/\/tez\.google\.com\/pay|createTransactionRef|tr:|mc:|url:/i, 'The merchant UPI launch logic must not be active until the bank/MCC is configured');
-assert.match(transactionSource, /copyButton\.textContent = 'UPI ID copied'|UPI ID copied/i, 'The manual UPI copy action must show the copied confirmation');
-assert.doesNotMatch(transactionSource, /transaction-overlay|Pay by UPI|PAY BY UPI|Open your installed UPI app|payment-status-region|Waiting for payment|Review Contribution|donor information form|modal-button/i, 'The intermediate payment modal and pre-payment flow must be removed');
+require('./p2p-upi.cjs');
 
 process.env.SVN_DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'svn-payment-test-'));
 const { app, initialise, database, finalizeVerifiedPayment } = require('../server/index.cjs');
