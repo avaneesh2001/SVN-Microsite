@@ -5,10 +5,11 @@ const path = require('node:path');
 
 const transactionSource = fs.readFileSync(path.join(__dirname, '..', 'transactions.js'), 'utf8');
 assert.match(transactionSource, /upi:\/\/pay\?/i, 'UPI intent URI must be generated for mobile payments');
-assert.match(transactionSource, /PAY BY UPI/i, 'Payment UI should use the simple PAY BY UPI action');
-assert.match(transactionSource, /UPI payment is available on your mobile device\./i, 'Desktop must show a graceful mobile-only message');
-assert.doesNotMatch(transactionSource, /Show QR|manual UPI ID|Enter UPI ID|qr code/i, 'The QR/manual UPI entry flow should stay removed');
-assert.doesNotMatch(transactionSource, /8588993989@ptyes|vpa:\s*'8588993989@ptyes'/i, 'Production VPA must not be hard-coded into the frontend');
+assert.match(transactionSource, /buildUpiUrl\(|payByUpi\(|tr=|unique.*reference|window\.location\.href = buildUpiUrl\(|window\.location\.href = payByUpi\(/i, 'Direct UPI launch and unique transaction reference must be present');
+assert.match(transactionSource, /8588993989@ptyes/i, 'The SVN VPA must be set for the direct UPI launcher');
+assert.match(transactionSource, /Pay directly by UPI|Open Google Pay, PhonePe, BHIM|\+91 85889 93989/i, 'Fallback payment instructions must mirror the old SVN donor guidance');
+assert.doesNotMatch(transactionSource, /transaction-overlay|Pay by UPI|PAY BY UPI|Open your installed UPI app|payment-status-region|Waiting for payment|modal-button|Review Contribution|donor information form/i, 'The intermediate payment modal and pre-payment flow must be removed');
+assert.doesNotMatch(transactionSource, /preventDefault\(\)\s*;\s*stopPropagation\(\)\s*;\s*window\.location\.href = buildUpiUrl\(/i, 'Direct launch should remain immediate and not blocked by another click intercept');
 
 process.env.SVN_DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'svn-payment-test-'));
 const { app, initialise, database, finalizeVerifiedPayment } = require('../server/index.cjs');

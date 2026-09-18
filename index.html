@@ -114,6 +114,17 @@
         </div>
         <button class="primary-action contribute-now-trigger" type="button">SPONSOR A STUDENT</button>
       </div>
+
+      <div class="upi-fallback-panel" id="upi-fallback-panel" hidden>
+        <p class="upi-fallback-kicker">Pay directly by UPI</p>
+        <p class="upi-fallback-label">UPI ID</p>
+        <div class="upi-fallback-row">
+          <code>8588993989@ptyes</code>
+          <button type="button" class="copy-upi-id" data-copy-upi-id>Copy UPI ID</button>
+        </div>
+        <p class="upi-fallback-alternate">or search: <strong>+91 85889 93989</strong></p>
+        <p class="upi-fallback-note">Open Google Pay, PhonePe, BHIM or any UPI app and transfer directly.</p>
+      </div>
     </section>
 
     <section class="section compact-section" id="advisory" data-section aria-labelledby="council-title">
@@ -140,24 +151,10 @@
   <footer>
     <p><a href="https://www.instagram.com/sangeet_vidya_niketan/" target="_blank" rel="noopener noreferrer">Instagram</a><span>·</span><a href="https://www.linkedin.com/company/sangeet-vidya-niketan/" target="_blank" rel="noopener noreferrer">LinkedIn</a><span>·</span><a href="https://sangeetvidyaniketan.com" target="_blank" rel="noopener noreferrer">Website</a><span>·</span><a href="https://www.youtube.com/@sangeet_vidya_niketan" target="_blank" rel="noopener noreferrer">YouTube</a></p>
     <p><a href="mailto:sangeetvidyaniketan@gmail.com">Email</a></p>
-    <p>Smita: <a href="tel:+917875744343">+91 78757 44343</a><span>·</span>Neha: <a href="tel:+919867144735">+91 98671 44735</a></p>
-    <p>Madhur: <a href="tel:+918588993989">+91 85889 93989</a></p>
+    <p class="office-contact">Office: <a href="tel:+918595793989">+91 85957 93989</a></p>
     <p class="creator-credit">Created by <span class="creator-name">R Aishwariya</span>, <span class="creator-name">Jash Kishnadwala</span> and <span class="creator-name">R Avaneesh</span></p>
   </footer>
   <div class="cursor-shimmer" aria-hidden="true"></div>
-  <div class="transaction-overlay" id="transaction-overlay" hidden>
-    <section class="transaction-dialog" role="dialog" aria-modal="true" aria-labelledby="transaction-title" tabindex="-1">
-      <button class="transaction-close" type="button" aria-label="Close contribution">×</button>
-      <div class="transaction-progress" aria-label="Transaction progress"></div>
-      <div class="transaction-content"></div>
-    </section>
-  </div>
-  <script>
-    window.__SVN_UPI__ = {
-      vpa: '8588993989@ptyes',
-      payeeName: 'Sangeet Vidya Niketan'
-    };
-  </script>
   <script type="module" src="script.js"></script>
 </body>
 </html>
