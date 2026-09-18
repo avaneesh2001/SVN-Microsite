@@ -5,8 +5,8 @@ export const UPI_PAYMENT_CONFIG = Object.freeze({
   payeeName: 'Sangeet Vidya Niketan',
   mobile: '+91 85957 93989',
   currency: 'INR',
-  transactionNote: '',
-  fallbackMessage: 'Open Google Pay, PhonePe, BHIM or any UPI app and transfer directly.'
+  instruction: 'Open Google Pay, PhonePe, BHIM or any UPI app and pay to the UPI ID above.',
+  fallbackMessage: 'Pay directly by UPI'
 });
 
 const formatINR = amount => new Intl.NumberFormat('en-IN', {
@@ -28,43 +28,38 @@ const clampAmount = value => {
   return Number.isFinite(numericValue) ? numericValue : NaN;
 };
 
-export function createUpiUrl(amount) {
-  const numericAmount = clampAmount(amount);
-  if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
-    throw new Error('A valid contribution amount is required.');
-  }
-
-  const params = new URLSearchParams({
-    pa: String(UPI_PAYMENT_CONFIG.vpa).trim(),
-    pn: String(UPI_PAYMENT_CONFIG.payeeName).trim(),
-    am: Number(numericAmount).toFixed(2),
-    cu: String(UPI_PAYMENT_CONFIG.currency || 'INR').trim()
-  });
-
-  return `upi://pay?${params.toString()}`;
-}
-
-export function buildUpiUrl(amount) {
-  return createUpiUrl(amount);
-}
-
-export function revealUpiFallback() {
+export function revealUpiFallback(amount = null) {
   const panel = document.querySelector('#upi-fallback-panel');
   if (!panel) return;
 
   panel.hidden = false;
   panel.classList.add('is-visible');
+
+  const displayAmount = panel.querySelector('[data-upi-amount]');
+  if (displayAmount) {
+    const numericAmount = clampAmount(amount ?? displayAmount.dataset.amount ?? 0);
+    displayAmount.textContent = Number.isFinite(numericAmount) ? `₹${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(numericAmount)}` : '₹0';
+    displayAmount.dataset.amount = String(numericAmount);
+  }
+
+  const payee = panel.querySelector('[data-upi-payee]');
+  if (payee) payee.textContent = UPI_PAYMENT_CONFIG.payeeName;
+
+  const vpa = panel.querySelector('[data-upi-vpa]');
+  if (vpa) vpa.textContent = UPI_PAYMENT_CONFIG.vpa;
+
   const copyButton = panel.querySelector('[data-copy-upi-id]');
   if (copyButton) {
-    copyButton.addEventListener('click', async () => {
+    copyButton.onClick = null;
+    copyButton.onclick = async () => {
       try {
         await navigator.clipboard.writeText(UPI_PAYMENT_CONFIG.vpa);
-        copyButton.textContent = 'Copied';
+        copyButton.textContent = 'UPI ID copied';
         setTimeout(() => { copyButton.textContent = 'Copy UPI ID'; }, 1800);
       } catch {
         copyButton.textContent = 'Copy UPI ID';
       }
-    }, { once: true });
+    };
   }
 }
 
@@ -72,15 +67,15 @@ export function payByUpi(amount, trigger = null) {
   const numericAmount = clampAmount(amount);
   if (!Number.isFinite(numericAmount) || numericAmount <= 0) return;
 
-  const upiUrl = createUpiUrl(numericAmount);
-
   if (trigger) {
-    trigger.dataset.upiUrl = upiUrl;
-    trigger.setAttribute('data-upi-url', upiUrl);
+    trigger.dataset.upiAmount = String(numericAmount);
+    trigger.setAttribute('data-upi-amount', String(numericAmount));
   }
 
-  if (typeof window !== 'undefined') {
-    window.location.href = upiUrl;
+  revealUpiFallback(numericAmount);
+  const panel = document.querySelector('#upi-fallback-panel');
+  if (panel) {
+    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 }
 

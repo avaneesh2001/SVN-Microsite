@@ -4,14 +4,11 @@ const os = require('node:os');
 const path = require('node:path');
 
 const transactionSource = fs.readFileSync(path.join(__dirname, '..', 'transactions.js'), 'utf8');
-assert.match(transactionSource, /upi:\/\/pay\?/i, 'UPI intent URI must be generated for mobile payments');
-assert.match(transactionSource, /createUpiUrl\(|payByUpi\(|window\.location\.href\s*=\s*createUpiUrl\(|window\.location\.href\s*=\s*payByUpi\(/i, 'Direct UPI launch must happen immediately from the click handler');
-assert.match(transactionSource, /sangeetvidyaniketan@ptyes/i, 'The SVN VPA must be set for the direct UPI launcher');
-assert.doesNotMatch(transactionSource, /8588993989@ptyes|8588993989|tr=|tid=|mc=|url=|tn=|transaction reference|invoice/i, 'The stale VPA and extra merchant metadata must be removed from the first direct UPI test');
-assert.match(transactionSource, /pa:\s*['\"]sangeetvidyaniketan@ptyes['\"]|pa:\s*String\(UPI_PAYMENT_CONFIG\.vpa\)/i, 'The direct UPI URI must use the corrected VPA');
-assert.match(transactionSource, /pn:\s*['\"]Sangeet Vidya Niketan['\"]|pn:\s*String\(UPI_PAYMENT_CONFIG\.payeeName\)/i, 'The direct UPI URI must use the corrected payee name');
-assert.match(transactionSource, /am:\s*Number\(amount\)\.toFixed\(2\)|am:\s*numericAmount\.toFixed\(2\)/i, 'The direct UPI URI must use a fixed 2-decimal amount');
-assert.match(transactionSource, /cu:\s*['\"]INR['\"]|cu:\s*String\(UPI_PAYMENT_CONFIG\.currency\s*\|\|\s*'INR'\)/i, 'The direct UPI URI must set INR as the currency');
+assert.doesNotMatch(transactionSource, /upi:\/\/pay\?/i, 'The broken merchant UPI intent must be removed until the MCC and gateway are configured');
+assert.match(transactionSource, /revealUpiFallback\(|payByUpi\(|sangeetvidyaniketan@ptyes|Open Google Pay, PhonePe, BHIM or any UPI app and pay to the UPI ID above/i, 'The manual UPI fallback must be active');
+assert.doesNotMatch(transactionSource, /8588993989@ptyes|8588993989/i, 'The stale VPA must never be in the project again');
+assert.doesNotMatch(transactionSource, /merchantCategoryCode|returnUrl|PaymentRequest|https:\/\/tez\.google\.com\/pay|createTransactionRef|tr:|mc:|url:/i, 'The merchant UPI launch logic must not be active until the bank/MCC is configured');
+assert.match(transactionSource, /copyButton\.textContent = 'UPI ID copied'|UPI ID copied/i, 'The manual UPI copy action must show the copied confirmation');
 assert.doesNotMatch(transactionSource, /transaction-overlay|Pay by UPI|PAY BY UPI|Open your installed UPI app|payment-status-region|Waiting for payment|Review Contribution|donor information form|modal-button/i, 'The intermediate payment modal and pre-payment flow must be removed');
 
 process.env.SVN_DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'svn-payment-test-'));
