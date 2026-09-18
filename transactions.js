@@ -5,8 +5,8 @@ export const UPI_PAYMENT_CONFIG = Object.freeze({
   payeeName: 'Sangeet Vidya Niketan',
   mobile: '+91 85957 93989',
   currency: 'INR',
-  instruction: 'Open Google Pay, PhonePe, BHIM or any UPI app and pay to the UPI ID above.',
-  fallbackMessage: 'Pay directly by UPI'
+  instruction: 'Open Google Pay, PhonePe, BHIM or any UPI app and pay directly to this UPI ID.',
+  fallbackMessage: 'Having trouble paying?'
 });
 
 const formatINR = amount => new Intl.NumberFormat('en-IN', {
@@ -27,6 +27,22 @@ const clampAmount = value => {
   const numericValue = Number(String(value ?? '').replace(/[₹,\s]/g, ''));
   return Number.isFinite(numericValue) ? numericValue : NaN;
 };
+
+export function createUpiUrl(amount) {
+  const numericAmount = clampAmount(amount);
+  if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+    throw new Error('A valid contribution amount is required.');
+  }
+
+  const params = new URLSearchParams({
+    pa: 'sangeetvidyaniketan@ptyes',
+    pn: 'Sangeet Vidya Niketan',
+    am: Number(numericAmount).toFixed(2),
+    cu: 'INR'
+  });
+
+  return `upi://pay?${params.toString()}`;
+}
 
 export function revealUpiFallback(amount = null) {
   const panel = document.querySelector('#upi-fallback-panel');
@@ -50,7 +66,6 @@ export function revealUpiFallback(amount = null) {
 
   const copyButton = panel.querySelector('[data-copy-upi-id]');
   if (copyButton) {
-    copyButton.onClick = null;
     copyButton.onclick = async () => {
       try {
         await navigator.clipboard.writeText(UPI_PAYMENT_CONFIG.vpa);
@@ -67,15 +82,15 @@ export function payByUpi(amount, trigger = null) {
   const numericAmount = clampAmount(amount);
   if (!Number.isFinite(numericAmount) || numericAmount <= 0) return;
 
+  const upiUrl = createUpiUrl(numericAmount);
+
   if (trigger) {
-    trigger.dataset.upiAmount = String(numericAmount);
-    trigger.setAttribute('data-upi-amount', String(numericAmount));
+    trigger.dataset.upiUrl = upiUrl;
+    trigger.setAttribute('data-upi-url', upiUrl);
   }
 
-  revealUpiFallback(numericAmount);
-  const panel = document.querySelector('#upi-fallback-panel');
-  if (panel) {
-    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  if (typeof window !== 'undefined') {
+    window.location.href = upiUrl;
   }
 }
 
