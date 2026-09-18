@@ -4,7 +4,7 @@ The browser can hand a `upi://pay` URI for the configured Sangeet Vidya Niketan 
 
 ## Frontend UPI adapter
 
-`UPI_PAYMENT_CONFIG` in [`transactions.js`](./transactions.js) is the source for the configured VPA, payee, note, currency, and reference prefix. It currently uses `8588993989@ptyes` for `Sangeet Vidya Niketan`. This enables manual UPI app handoff but does not provide payment verification.
+`UPI_PAYMENT_CONFIG` in [`transactions.js`](./transactions.js) is the source for the configured VPA, payee, note, currency, and reference prefix. It uses `sangeetvidyaniketan@ptyes` for `Sangeet Vidya Niketan`. This enables manual UPI app handoff but does not provide payment verification.
 
 The payment interface is separated into `UPIPaymentOptions`, `UPIIntentButton`, `PaymentStatus`, and `PaymentSuccess`. `createUPIIntent()` generates the UPI URI from configurable values. Selection opens payment directly without a contribution information, donor details or review screen.
 

@@ -6,8 +6,8 @@ const path = require('node:path');
 const transactionSource = fs.readFileSync(path.join(__dirname, '..', 'transactions.js'), 'utf8');
 assert.match(transactionSource, /upi:\/\/pay\?/i, 'UPI intent URI must be generated for mobile payments');
 assert.match(transactionSource, /buildUpiUrl\(|payByUpi\(|tr=|unique.*reference|window\.location\.href = buildUpiUrl\(|window\.location\.href = payByUpi\(/i, 'Direct UPI launch and unique transaction reference must be present');
-assert.match(transactionSource, /8588993989@ptyes/i, 'The SVN VPA must be set for the direct UPI launcher');
-assert.match(transactionSource, /Pay directly by UPI|Open Google Pay, PhonePe, BHIM|\+91 85889 93989/i, 'Fallback payment instructions must mirror the old SVN donor guidance');
+assert.match(transactionSource, /sangeetvidyaniketan@ptyes/i, 'The SVN VPA must be set for the direct UPI launcher');
+assert.match(transactionSource, /Pay directly by UPI|Open Google Pay, PhonePe, BHIM|\+91 85957 93989/i, 'Fallback payment instructions must mirror the working donor guidance');
 assert.doesNotMatch(transactionSource, /transaction-overlay|Pay by UPI|PAY BY UPI|Open your installed UPI app|payment-status-region|Waiting for payment|modal-button|Review Contribution|donor information form/i, 'The intermediate payment modal and pre-payment flow must be removed');
 assert.doesNotMatch(transactionSource, /preventDefault\(\)\s*;\s*stopPropagation\(\)\s*;\s*window\.location\.href = buildUpiUrl\(/i, 'Direct launch should remain immediate and not blocked by another click intercept');
 

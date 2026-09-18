@@ -1,9 +1,9 @@
 import membershipData from './membership-tiers.json';
 
 export const UPI_PAYMENT_CONFIG = Object.freeze({
-  vpa: '8588993989@ptyes',
+  vpa: 'sangeetvidyaniketan@ptyes',
   payeeName: 'Sangeet Vidya Niketan',
-  mobile: '+91 85889 93989',
+  mobile: '+91 85957 93989',
   currency: 'INR',
   transactionNote: 'Contribution to Sangeet Vidya Niketan',
   fallbackMessage: 'Open Google Pay, PhonePe, BHIM or any UPI app and transfer directly.'
