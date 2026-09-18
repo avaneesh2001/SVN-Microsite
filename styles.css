@@ -615,3 +615,7 @@ body.modal-open { overflow: hidden; }
 .upi-copy-fallback { margin-top: 1.5rem; text-align: center; }
 .upi-copy-fallback code { user-select: all; overflow-wrap: anywhere; }
 .copy-upi-id { margin: .5rem; padding: .5rem .8rem; font: inherit; color: inherit; background: transparent; border: 1px solid currentColor; border-radius: 4px; cursor: pointer; }
+
+.upi-qr { margin: 0 auto 1rem; max-width: 300px; }
+.upi-qr img { display: block; width: 100%; height: auto; box-sizing: border-box; padding: 16px; background: #fff; border-radius: 8px; }
+.upi-qr figcaption { margin-top: .75rem; line-height: 1.5; }

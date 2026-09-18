@@ -10,7 +10,7 @@ Only `pa`, `pn`, and `cu` are sent. There is no amount, MCC, transaction referen
 
 `transactions.js` contains `createP2PUpiUrl`, `payByUpi`, and the button handlers in `initTransactions`. Each button has one handler even after repeat initialization. Launch is synchronous with no API call, modal, review, QR, donor form or second payment button.
 
-Tier amounts stay visible on their cards; the custom contribution remains visible in its input. Donors enter that amount manually inside their UPI app. Copy UPI ID is a secondary inline fallback with a visible ID for manual copying if clipboard access fails.
+Tier amounts stay visible on their cards; the custom contribution remains visible in its input. Donors enter that amount manually inside their UPI app. The supplied QR image (`public/images/upi-qr.png`) is displayed inline below the contribution buttons for scanning. Copy UPI ID is a secondary inline fallback with a visible ID for manual copying if clipboard access fails.
 
 ## Real Android test — pending
 
