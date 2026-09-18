@@ -20,15 +20,15 @@ export const ORGANISATION_SETTINGS = Object.freeze({
   tax_receipt_policy: { status: 'PENDING_CA_CONFIRMATION', eligibleAmountMode: 'NOT_AUTOMATICALLY_EQUAL_TO_PAYMENT', form10BD10BEAmountSource: 'CONFIRMED_ELIGIBLE_DONATION_AMOUNT' }
 });
 
-// Manual UPI configuration. Gateway verification is not connected yet.
 export const UPI_PAYMENT_CONFIG = Object.freeze({
-  mode: 'manual_upi',
+  mode: 'upi_intent',
   vpa: '8588993989@ptyes',
   payeeName: 'Sangeet Vidya Niketan',
   transactionReferencePrefix: 'GC-TEST',
   transactionNote: 'Contribution to Sangeet Vidya Niketan',
   currency: 'INR',
-  showDeveloperControls: false
+  showDeveloperControls: false,
+  desktopMessage: 'Please open this page on your phone to pay by UPI.'
 });
 
 const overlay = document.querySelector('#transaction-overlay');
@@ -70,9 +70,14 @@ export const PaymentStatus = ({ state = 'waiting', message = '' } = {}) => {
   return `<div class="payment-status payment-status--${state}" role="status" aria-live="polite" data-payment-status="${state}"><span class="payment-status-dot" aria-hidden="true"></span><div><strong>${label}</strong>${message ? `<span>${escapeHTML(message)}</span>` : ''}</div></div>`;
 };
 
+const isMobileUPIEnabled = () => {
+  const userAgent = navigator?.userAgent || '';
+  return /android|iphone|ipad|ipod|mobile/i.test(userAgent) || window.matchMedia('(pointer: coarse)').matches;
+};
+
 export const UPIIntentButton = () => `<button class="upi-action upi-intent-trigger" type="button"><span><strong>PAY BY UPI</strong></span><span class="upi-action-arrow" aria-hidden="true">↗</span></button>`;
 
-export const UPIPaymentOptions = ({ amount }) => `<div class="upi-payment-panel"><div class="upi-payment-total"><span>Amount to pay</span><strong>${formatINR(amount)}</strong></div><div class="upi-payment-actions">${UPIIntentButton()}</div><div class="payment-status-region">${PaymentStatus({ state: 'waiting', message: 'Automatic payment confirmation is not yet available.' })}</div></div>`;
+export const UPIPaymentOptions = ({ amount }) => `<div class="upi-payment-panel"><div class="upi-payment-total"><span>Amount to pay</span><strong>${formatINR(amount)}</strong></div><div class="upi-payment-actions">${UPIIntentButton()}</div><div class="payment-status-region">${PaymentStatus({ state: 'waiting', message: 'Payment verification happens after you return to this page.' })}</div></div>`;
 
 export const PaymentSuccess = ({ title, message }) => `<div class="status-mark" aria-hidden="true">✓</div><p class="transaction-kicker">Demo payment success</p><h2 class="transaction-heading" id="transaction-title" tabindex="-1">${escapeHTML(title)}</h2><p class="transaction-lede">${escapeHTML(message)}</p>`;
 
@@ -331,7 +336,11 @@ const renderPayment = () => {
     bindDeveloperControls(content);
     return;
   }
-  setView(`<p class="transaction-kicker">${label}</p><h2 class="transaction-heading" id="transaction-title" tabindex="-1">Pay by UPI</h2><span class="demo-label">Manual UPI · Verification not connected</span><p class="transaction-lede">Continue with the UPI app on your phone.</p>${serverState}${UPIPaymentOptions({ amount })}`);
+  if (!isMobileUPIEnabled()) {
+    setView(`<p class="transaction-kicker">${label}</p><h2 class="transaction-heading" id="transaction-title" tabindex="-1">Pay by UPI</h2><p class="transaction-lede">${escapeHTML(UPI_PAYMENT_CONFIG.desktopMessage)}</p>${serverState}`);
+    return;
+  }
+  setView(`<p class="transaction-kicker">${label}</p><h2 class="transaction-heading" id="transaction-title" tabindex="-1">Pay by UPI</h2><p class="transaction-lede">Open your installed UPI app and complete the payment securely.</p>${serverState}${UPIPaymentOptions({ amount })}`);
   content.querySelector('.upi-intent-trigger').addEventListener('click', event => attemptUPIIntent(event.currentTarget));
   if (!transaction.checkout) content.querySelectorAll('.upi-action').forEach(button => { button.disabled = true; });
   bindDeveloperControls(content);
