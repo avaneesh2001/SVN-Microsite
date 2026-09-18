@@ -1,31 +1,29 @@
-# Direct P2P UPI payment
+# Recipient-only P2P UPI test
 
-Contribution buttons synchronously assign a generic P2P `upi://pay` intent to `window.location.href`. The recipient is `8588993989@ptyes`, with payee label `Sangeet Vidya Niketan`. Only `pa`, `pn`, `am`, and `cu` are included. There is no merchant classification, MCC, transaction reference, merchant URL, Google Pay PaymentRequest, or onboarding data.
-
-`transactions.js` contains `createP2PUpiUrl`, `payByUpi`, and the button handlers in `initTransactions`. Initialization replaces each button's click handler, so repeated initialization does not stack handlers. The launch requires no network request, donor information, modal, review, QR screen, or second payment button.
-
-## Pending real Android test
-
-`P2P_TEST_MODE` is currently `false`: contribution clicks use the selected tier amount or entered custom amount. Set it to `true` only for an explicit ₹1 device test; a visible notice then indicates the override. Tier values remain intact in `membership-tiers.json`.
-
-Exact test URI:
+Contribution buttons synchronously assign this exact URI to `window.location.href`:
 
 ```text
-upi://pay?pa=8588993989%40ptyes&pn=Sangeet%20Vidya%20Niketan&am=1.00&cu=INR
+upi://pay?pa=8588993989%40ptyes&pn=Sangeet%20Vidya%20Niketan&cu=INR
 ```
 
-Open the site in Chrome on a real Android phone with UPI apps installed, tap CONTRIBUTE, and check the app chooser or configured default UPI app, recipient and ₹1 amount. The account name displayed by the app depends on the receiving account; the `pn` label cannot establish its identity. Complete the payment only after checking the recipient. This device/payment test has not been performed here.
+Only `pa`, `pn`, and `cu` are sent. There is no amount, MCC, transaction reference, transaction ID, URL, note or merchant metadata. The recipient remains `8588993989@ptyes`.
 
-After the ₹1 test succeeds, set `P2P_TEST_MODE = false` in `transactions.js` and rebuild. Buttons then launch the actual selected tier or custom amount, and the test notice is hidden.
+`transactions.js` contains `createP2PUpiUrl`, `payByUpi`, and the button handlers in `initTransactions`. Each button has one handler even after repeat initialization. Launch is synchronous with no API call, modal, review, QR, donor form or second payment button.
+
+Tier amounts stay visible on their cards; the custom contribution remains visible in its input. Donors enter that amount manually inside their UPI app. Copy UPI ID is a secondary inline fallback with a visible ID for manual copying if clipboard access fails.
+
+## Real Android test — pending
+
+In Android Chrome, tap CONTRIBUTE and choose Google Pay, PhonePe or BHIM if installed (a default app may open directly). Check the recipient, manually enter ₹1 inside the app, and test payment. Repeat with the same intent in each installed app. These real-device tests have not been performed here.
+
+The user reports that the earlier amount-prefilled intent opened Google Pay but payment failed, while manual payment to the same ID worked. The cause is not established. If this recipient-only intent works in PhonePe/BHIM but fails in Google Pay, record that as a Google Pay-specific intent issue and keep the UPI ID unchanged.
 
 ## Payment status boundary
 
-The static website cannot verify completion of a P2P payment. Opening the app or returning to the page never displays automatic payment success, activates membership, or issues a receipt.
-
-The retained Express checkout/status/receipt endpoints are independent backend functionality and are not called by this direct P2P launch. Their pending records require independently verified payment before any finalization; a P2P app handoff provides no such verification.
+The static site cannot independently verify a P2P payment. App launch or return never displays payment success, activates membership, or issues a receipt. The retained Express checkout/status/receipt endpoints are separate and are not called by this launch.
 
 ## Checks
 
-- `node tests/p2p-upi.cjs`: exact URI, allowed fields, synchronous navigation, repeated initialization, test and actual amounts, invalid input.
-- `node tests/payment-flow.cjs`: includes P2P checks and existing backend authorization/receipt tests.
+- `node tests/p2p-upi.cjs`: exact URI, allowed fields, synchronous single navigation, repeated initialization, visible amounts, copy success/failure.
+- `node tests/payment-flow.cjs`: P2P checks and existing backend authorization/receipt tests.
 - `npm run build`: production bundle.

@@ -611,3 +611,7 @@ body.modal-open { overflow: hidden; }
 
   .institution-logo { width: min(180px,100%); }
 }
+
+.upi-copy-fallback { margin-top: 1.5rem; text-align: center; }
+.upi-copy-fallback code { user-select: all; overflow-wrap: anywhere; }
+.copy-upi-id { margin: .5rem; padding: .5rem .8rem; font: inherit; color: inherit; background: transparent; border: 1px solid currentColor; border-radius: 4px; cursor: pointer; }

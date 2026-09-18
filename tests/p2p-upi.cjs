@@ -4,44 +4,55 @@ const path = require('node:path');
 const vm = require('node:vm');
 const source = fs.readFileSync(path.join(__dirname, '..', 'transactions.js'), 'utf8');
 const membershipData = require('../membership-tiers.json');
-const expected = 'upi://pay?pa=8588993989%40ptyes&pn=Sangeet%20Vidya%20Niketan&am=1.00&cu=INR';
-assert.doesNotMatch(source, /PaymentRequest|tez\.google|merchant|\bmc\s*:|\btr\s*:|\burl\s*:|transaction\.checkout|\/api\/checkouts|fetch\(|XMLHttpRequest|Payment successful/i);
+const expected = 'upi://pay?pa=8588993989%40ptyes&pn=Sangeet%20Vidya%20Niketan&cu=INR';
+assert.doesNotMatch(source, /PaymentRequest|tez\.google|merchant|\b(?:am|mc|tr|tid|url|tn)\s*:|transaction\.checkout|\/api\/checkouts|fetch\(|XMLHttpRequest|Payment successful/i);
 
-// Execute the frontend with a minimal DOM and observe synchronous navigations.
-for (const testMode of [true, false]) {
+(async () => {
   const navigations = [];
   const button = code => ({ dataset: { membershipTier: code }, setAttribute() {} });
   const tierButtons = membershipData.tiers.map(tier => button(tier.code));
   const sponsorButton = button();
+  const copyButton = button();
+  const copyStatus = { textContent: '' };
+  const copied = [];
+  const clipboard = { async writeText(value) { copied.push(value); } };
   const input = { value: '1234', reportValidity() {}, focus() {} };
-  const notice = { hidden: true };
   const grid = { innerHTML: '', querySelectorAll: () => tierButtons };
-  const elements = { '#membership-tiers': grid, '#other-contribution-amount': input, '.contribute-now-trigger': sponsorButton, '#upi-test-notice': notice };
+  const elements = { '#membership-tiers': grid, '#other-contribution-amount': input, '.contribute-now-trigger': sponsorButton, '[data-copy-upi-id]': copyButton, '#upi-copy-status': copyStatus };
   const context = vm.createContext({
-    membershipData, URLSearchParams,
+    membershipData, URLSearchParams, navigator: { clipboard },
     document: { querySelector: selector => elements[selector] },
     window: { location: { set href(value) { navigations.push(value); } } }
   });
-  vm.runInContext(source.replace(/^import .*;\n/, '').replace(/export /g, '').replace(/P2P_TEST_MODE = (?:true|false)/, `P2P_TEST_MODE = ${testMode}`), context);
-  assert.equal(vm.runInContext('createP2PUpiUrl(1)', context), expected);
-  for (const invalid of ['0', '-1', 'NaN', 'Infinity', 'null']) {
-    assert.throws(() => vm.runInContext(`createP2PUpiUrl(${invalid})`, context));
-  }
+  vm.runInContext(source.replace(/^import .*;\n/, '').replace(/export /g, ''), context);
+  assert.equal(vm.runInContext('createP2PUpiUrl()', context), expected);
   vm.runInContext('initTransactions(); initTransactions();', context);
-  assert.equal(notice.hidden, !testMode);
   tierButtons.forEach((trigger, index) => {
     const before = navigations.length;
     trigger.onclick();
-    assert.equal(navigations.length, before + 1, 'Exactly one immediate launch per click after repeat initialization');
-    const uri = new URL(navigations.at(-1));
-    assert.deepEqual([...uri.searchParams.keys()], ['pa', 'pn', 'am', 'cu']);
-    assert.equal(uri.searchParams.get('am'), (testMode ? 1 : membershipData.tiers[index].amount).toFixed(2));
+    assert.equal(navigations.length, before + 1, 'Exactly one synchronous launch per click after repeat initialization');
+    assert.equal(navigations.at(-1), expected);
+    assert.deepEqual([...new URL(navigations.at(-1)).searchParams.keys()], ['pa', 'pn', 'cu']);
+    assert.ok(grid.innerHTML.includes(new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(membershipData.tiers[index].amount)), 'Tier amount remains visible');
   });
-  sponsorButton.onclick();
-  assert.equal(new URL(navigations.at(-1)).searchParams.get('am'), testMode ? '1.00' : '1234.00');
+  for (const amount of ['1', '1234', '11000']) {
+    input.value = amount;
+    const before = navigations.length;
+    sponsorButton.onclick();
+    assert.equal(navigations.length, before + 1);
+    assert.equal(navigations.at(-1), expected, 'Custom amount never enters URI');
+    assert.equal(input.value, amount, 'Custom amount remains visible');
+  }
   const before = navigations.length;
   input.value = '';
   sponsorButton.onclick();
   assert.equal(navigations.length, before);
-}
-console.log(`PASS: P2P URI, minimal fields, synchronous single-click launch, test/tier/custom amounts and invalid input.\n${expected}`);
+  await copyButton.onclick();
+  assert.deepEqual(copied, ['8588993989@ptyes']);
+  assert.equal(copyStatus.textContent, 'UPI ID copied');
+  clipboard.writeText = async () => { throw new Error('Clipboard denied'); };
+  await copyButton.onclick();
+  assert.equal(copyStatus.textContent, 'Copy this UPI ID manually: 8588993989@ptyes');
+  assert.equal(navigations.length, before, 'Copy fallback never launches payment');
+  console.log(`PASS: recipient-only URI, single-click launch, visible amounts and copy fallback.\n${expected}`);
+})().catch(error => { console.error(error); process.exitCode = 1; });
