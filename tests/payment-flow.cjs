@@ -3,8 +3,6 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 
-require('./p2p-upi.cjs');
-
 process.env.SVN_DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'svn-payment-test-'));
 const { app, initialise, database, finalizeVerifiedPayment } = require('../server/index.cjs');
 (async () => {

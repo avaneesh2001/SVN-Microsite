@@ -1,9 +1,11 @@
 import membershipData from './membership-tiers.json';
 
-export const UPI_PAYMENT_CONFIG = Object.freeze({
-  vpa: '8588993989@ptyes',
-  payeeName: 'Sangeet Vidya Niketan',
-  currency: 'INR'
+const paymentButtons = Object.freeze({
+  MEMBER_11000: 'pl_TejejECoKJiUGY',
+  PATRON_25000: 'pl_Tejn5pE3kCWvPt',
+  BENEFACTOR_51000: 'pl_TejpIVSniPgaAl',
+  FELLOW_110000: 'pl_TejqWJfFRrNL6l',
+  LEGACY_500000: 'pl_TejsSWaRUW6DnB'
 });
 
 const formatINR = amount => new Intl.NumberFormat('en-IN', {
@@ -20,42 +22,21 @@ const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, character =>
   "'": '&#39;'
 })[character]);
 
-export function createP2PUpiUrl() {
-  const params = new URLSearchParams({
-    pa: UPI_PAYMENT_CONFIG.vpa,
-    pn: UPI_PAYMENT_CONFIG.payeeName,
-    cu: UPI_PAYMENT_CONFIG.currency
-  });
-
-  return `upi://pay?${params.toString().replace(/\+/g, '%20')}`;
-}
-
-export function payByUpi(trigger = null) {
-  const upiUrl = createP2PUpiUrl();
-
-  if (trigger) {
-    trigger.dataset.upiUrl = upiUrl;
-    trigger.setAttribute('data-upi-url', upiUrl);
-  }
-
-  if (typeof window !== 'undefined') {
-    window.location.href = upiUrl;
-  }
-}
-
 export function initTransactions() {
-  const copyButton = document.querySelector('[data-copy-upi-id]');
-  const copyStatus = document.querySelector('#upi-copy-status');
-  if (copyButton) {
-    copyButton.onclick = async () => {
-      try {
-        await navigator.clipboard.writeText(UPI_PAYMENT_CONFIG.vpa);
-        if (copyStatus) copyStatus.textContent = 'UPI ID copied';
-      } catch {
-        if (copyStatus) copyStatus.textContent = `Copy this UPI ID manually: ${UPI_PAYMENT_CONFIG.vpa}`;
-      }
-    };
-  }
+  const dialog = document.querySelector('#contribution-payment-dialog');
+  const closeButton = document.querySelector('#contribution-dialog-close');
+  let returnFocus = null;
+
+  const showContributionNotice = (amount, name, trigger) => {
+    if (!dialog) return;
+    document.querySelector('#contribution-selected-name').textContent = name;
+    document.querySelector('#contribution-selected-amount').textContent = formatINR(amount);
+    returnFocus = trigger;
+    dialog.showModal();
+  };
+
+  if (closeButton) closeButton.onclick = () => dialog.close();
+  if (dialog) dialog.onclose = () => returnFocus?.focus();
 
   const membershipGrid = document.querySelector('#membership-tiers');
 
@@ -67,7 +48,9 @@ export function initTransactions() {
         <p class="tier-amount">${formatINR(tier.amount)}</p>
         <p class="tier-impact">${escapeHTML(tier.description)}</p>
         <ul class="tier-benefits">${tier.benefitLabels.map(benefit => `<li>${escapeHTML(benefit)}</li>`).join('')}</ul>
-        <button class="tier-btn membership-trigger" type="button" data-membership-tier="${tier.code}">${escapeHTML(tier.cta)}</button>
+        ${paymentButtons[tier.code]
+          ? `<form class="tier-payment-button" data-payment-button-id="${paymentButtons[tier.code]}" aria-label="Pay for ${escapeHTML(tier.name)}"><p class="tier-payment-status" role="status">Loading payment button…</p></form>`
+          : `<button class="tier-btn membership-trigger" type="button" data-membership-tier="${tier.code}">${escapeHTML(tier.cta)}</button>`}
       </article>
     `).join('');
 
@@ -76,24 +59,24 @@ export function initTransactions() {
         const selectedTier = membershipData.tiers.find(tier => tier.code === trigger.dataset.membershipTier);
         if (!selectedTier) return;
 
-        payByUpi(trigger);
+        showContributionNotice(selectedTier.amount, selectedTier.name, trigger);
       };
     });
   }
 
-  const customAmountInput = document.querySelector('#other-contribution-amount');
-  const sponsorButton = document.querySelector('.contribute-now-trigger');
-
-  if (customAmountInput && sponsorButton) {
-    sponsorButton.onclick = () => {
-      const customAmount = Number(customAmountInput.value || 0);
-      if (!Number.isFinite(customAmount) || customAmount <= 0) {
-        customAmountInput.reportValidity();
-        customAmountInput.focus();
-        return;
-      }
-
-      payByUpi(sponsorButton);
+  // Append live scripts after rendering; scripts inside innerHTML do not execute.
+  document.querySelectorAll('.tier-payment-button').forEach(form => {
+    if (form.querySelector('script[data-payment_button_id]')) return;
+    form.onsubmit = event => event.preventDefault();
+    const status = form.querySelector('.tier-payment-status');
+    const paymentScript = document.createElement('script');
+    paymentScript.src = 'https://checkout.razorpay.com/v1/payment-button.js';
+    paymentScript.setAttribute('data-payment_button_id', form.dataset.paymentButtonId);
+    paymentScript.async = true;
+    paymentScript.onload = () => { status.hidden = true; };
+    paymentScript.onerror = () => {
+      status.textContent = 'Unable to load payments. Please refresh and try again.';
     };
-  }
+    form.appendChild(paymentScript);
+  });
 }

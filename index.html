@@ -102,29 +102,28 @@
       <div class="short-sep" aria-hidden="true"></div>
       <div class="section-label reveal" id="contribute-title">An Invitation to Patronage</div>
       <p class="contribution-intro reveal">We are opening doors to the people who will shape India's cultural landscape for the next 100 years.</p>
-      <p>Enter the contribution amount shown below inside your UPI app after tapping CONTRIBUTE.</p>
+      <p>Choose how you would like to support our students.</p>
       <div class="contribution-options reveal">
         <div class="contribution-option-group">
           <p class="option-heading">Golden Circle Membership</p>
           <div class="tiers" id="membership-tiers"></div>
         </div>
         <div class="other-contribution">
-          <label for="other-contribution-amount">Sponsor a Student</label>
-          <div class="other-amount-input"><span aria-hidden="true">₹</span><input id="other-contribution-amount" required type="number" inputmode="numeric" min="1" step="1" placeholder="Enter amount"></div>
-          <p>Enter this same amount in your UPI app to make a semester of support possible.</p>
+          <p class="option-heading">Sponsor a Student</p>
+          <p>Make a semester of support possible.</p>
         </div>
-        <button class="primary-action contribute-now-trigger" type="button">SPONSOR A STUDENT</button>
+        <form class="tier-payment-button" data-payment-button-id="pl_Tejv124lsiX3hF" aria-label="Sponsor a Student">
+          <p class="tier-payment-status" role="status">Loading payment button…</p>
+        </form>
       </div>
-      <div class="upi-copy-fallback">
-        <figure class="upi-qr">
-          <img src="%BASE_URL%images/upi-qr.png" alt="Sangeet Vidya Niketan UPI payment QR code" width="390" height="396" loading="lazy">
-          <figcaption>Scan with your UPI app to contribute to Sangeet Vidya Niketan.</figcaption>
-        </figure>
-        <p>Or copy the UPI ID and pay manually.</p>
-        <code>8588993989@ptyes</code>
-        <button class="copy-upi-id" type="button" data-copy-upi-id>Copy UPI ID</button>
-        <p id="upi-copy-status" role="status" aria-live="polite"></p>
-      </div>
+      <dialog class="contribution-dialog" id="contribution-payment-dialog" aria-labelledby="contribution-dialog-title" aria-describedby="contribution-payment-instruction">
+        <button class="contribution-dialog-close" id="contribution-dialog-close" type="button" aria-label="Close contribution details">×</button>
+        <p class="contribution-eyebrow">A contribution to the arts</p>
+        <h2 id="contribution-dialog-title">Your support makes a difference</h2>
+        <p class="contribution-selection" id="contribution-selected-name"></p>
+        <p class="contribution-selected-amount" id="contribution-selected-amount"></p>
+        <p id="contribution-payment-instruction">Online payments coming soon.</p>
+      </dialog>
     </section>
 
     <section class="section compact-section" id="advisory" data-section aria-labelledby="council-title">

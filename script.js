@@ -236,7 +236,7 @@ if (precisePointer && !reduceMotion) {
   }, { passive: true });
   document.addEventListener('pointerover', event => {
     shimmer.classList.add('is-present');
-    shimmer.classList.toggle('is-catching-light', Boolean(event.target.closest('a,button,.emblem,.tier,.payment-upi')));
+    shimmer.classList.toggle('is-catching-light', Boolean(event.target.closest('a,button,.emblem,.tier')));
   }, { passive: true });
   document.documentElement.addEventListener('mouseleave', () => shimmer.classList.remove('is-present','is-catching-light'));
   const startShimmer = () => { if (!shimmerFrame) shimmerFrame = requestAnimationFrame(animateShimmer); };

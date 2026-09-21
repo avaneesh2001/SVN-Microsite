@@ -1,29 +1,13 @@
-# Recipient-only P2P UPI test
+# Payment integration status
 
-Contribution buttons synchronously assign this exact URI to `window.location.href`:
+Golden Circle Patron (₹25,000) uses `pl_Tejn5pE3kCWvPt`, and Golden Circle Benefactor (₹51,000) uses `pl_TejpIVSniPgaAl`. Golden Circle Fellow (₹1,10,000) uses `pl_TejqWJfFRrNL6l`. Legacy Patron (₹5,00,000) uses `pl_TejsSWaRUW6DnB`. Golden Circle Member (₹11,000) uses `pl_TejejECoKJiUGY`. All five embed the supplied Razorpay Payment Buttons using `https://checkout.razorpay.com/v1/payment-button.js`. The script is appended to its form after tier rendering so it executes. These tiers use their hosted buttons instead of the coming-soon notice.
 
-```text
-upi://pay?pa=8588993989%40ptyes&pn=Sangeet%20Vidya%20Niketan&cu=INR
-```
+The actual checkout amount and payment options are controlled by that button's Razorpay Dashboard configuration, not by the displayed tier amount. A live checkout/payment has not been verified here.
 
-Only `pa`, `pn`, and `cu` are sent. There is no amount, MCC, transaction reference, transaction ID, URL, note or merchant metadata. The recipient remains `8588993989@ptyes`.
+Sponsor a Student uses `pl_Tejv124lsiX3hF` with the same embed loader. Its old local amount input is removed because it was not connected to the hosted checkout; Razorpay controls the amount fields.
 
-`transactions.js` contains `createP2PUpiUrl`, `payByUpi`, and the button handlers in `initTransactions`. Each button has one handler even after repeat initialization. Launch is synchronous with no API call, modal, review, QR, donor form or second payment button.
+All membership tiers now use their configured Razorpay buttons. The previous QR, direct UPI intent, recipient details and copy action remain removed.
 
-Tier amounts stay visible on their cards; the custom contribution remains visible in its input. Donors enter that amount manually inside their UPI app. The supplied QR image (`public/images/upi-qr.png`) is displayed inline below the contribution buttons for scanning. Copy UPI ID is a secondary inline fallback with a visible ID for manual copying if clipboard access fails.
+The existing server checkout/status/receipt endpoints are separate and are not called by this embed. The site does not claim payment success, activate membership or issue receipts based on opening or closing Razorpay. Backend verification for Razorpay is not implemented.
 
-## Real Android test — pending
-
-In Android Chrome, tap CONTRIBUTE and choose Google Pay, PhonePe or BHIM if installed (a default app may open directly). Check the recipient, manually enter ₹1 inside the app, and test payment. Repeat with the same intent in each installed app. These real-device tests have not been performed here.
-
-The user reports that the earlier amount-prefilled intent opened Google Pay but payment failed, while manual payment to the same ID worked. The cause is not established. If this recipient-only intent works in PhonePe/BHIM but fails in Google Pay, record that as a Google Pay-specific intent issue and keep the UPI ID unchanged.
-
-## Payment status boundary
-
-The static site cannot independently verify a P2P payment. App launch or return never displays payment success, activates membership, or issues a receipt. The retained Express checkout/status/receipt endpoints are separate and are not called by this launch.
-
-## Checks
-
-- `node tests/p2p-upi.cjs`: exact URI, allowed fields, synchronous single navigation, repeated initialization, visible amounts, copy success/failure.
-- `node tests/payment-flow.cjs`: P2P checks and existing backend authorization/receipt tests.
-- `npm run build`: production bundle.
+Reference: https://razorpay.com/docs/payments/payment-button/quick-pay/
